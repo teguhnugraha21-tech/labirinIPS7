@@ -1,0 +1,2920 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Petualangan Murid 7 dalam mencari Potensi Sumber Daya Alam Indonesia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #1e293b;
+        }
+        h1, h2, h3, .font-game {
+            font-family: 'Fredoka', sans-serif;
+        }
+        #game-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #preview-canvas-container {
+            width: 100%;
+            height: 260px;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #38bdf8 0%, #0284c7 100%);
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        @media (min-width: 768px) {
+            #preview-canvas-container {
+                height: 360px;
+            }
+        }
+        /* Roblox-like 3D Button Styling */
+        .btn-roblox {
+            transition: all 0.1s ease;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+        }
+        .btn-roblox:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        /* Virtual Joystick */
+        #joystick-zone {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+        }
+        #joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50%;
+            position: absolute;
+            top: 32px;
+            left: 32px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes pulseDanger {
+            0%, 100% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
+            50% { box-shadow: inset 0 0 55px rgba(239, 68, 68, 0.65); }
+        }
+        .danger-vignette {
+            animation: pulseDanger 0.8s infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Main 3D World Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Screen Vignette Overlay (Red Flash on Damage / Monster Chase) -->
+    <div id="screen-vignette" class="fixed inset-0 z-20 pointer-events-none transition-opacity duration-200 opacity-0 bg-red-600/30"></div>
+
+    <!-- ==================== 1. START & CHARACTER CUSTOMIZATION SCREEN ==================== -->
+    <div id="start-screen" class="fixed inset-0 z-30 flex items-center justify-center p-3 md:p-6 bg-slate-900/75 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden border-4 border-sky-400 my-auto">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 p-4 md:p-6 text-center text-white relative">
+                <div class="inline-block bg-amber-400 text-slate-900 font-extrabold text-xs md:text-sm px-3 py-1 rounded-full mb-2 shadow">
+                    IPS KELAS 7 • PETUALANGAN EDUKASI 3D
+                </div>
+                <h1 class="text-xl md:text-3xl font-bold tracking-wide drop-shadow-md leading-tight">
+                    Petualangan Murid 7 dalam mencari Potensi Sumber Daya Alam Indonesia
+                </h1>
+                <p class="text-sky-100 text-xs md:text-sm mt-1">Jelajahi labirin 3D, jawab tantangan di setiap gerbang, dan temukan harta karun Indonesia Maju!</p>
+            </div>
+
+            <!-- Main Content Grid: Left = 3D Preview, Right = Customization Options -->
+            <div class="p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                <!-- 3D Character Preview -->
+                <div class="md:col-span-5 flex flex-col items-center">
+                    <div id="preview-canvas-container">
+                        <div class="absolute top-3 left-3 bg-slate-900/65 text-white text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                            👆 Geser untuk memutar 3D
+                        </div>
+                        <div id="preview-name-tag" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/95 text-slate-900 font-extrabold text-xs px-3.5 py-1 rounded-full shadow-md whitespace-nowrap">
+                            Murid Hebat
+                        </div>
+                    </div>
+
+                    <!-- Character Preset Roles -->
+                    <div class="grid grid-cols-2 gap-2 w-full mt-3">
+                        <button type="button" data-role="boy" class="role-btn active bg-sky-100 border-2 border-sky-500 text-sky-900 font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5">
+                            <span>👦</span> Murid Putra
+                        </button>
+                        <button type="button" data-role="girl" class="role-btn bg-slate-100 border-2 border-transparent text-slate-700 font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5">
+                            <span>👧</span> Murid Putri
+                        </button>
+                        <button type="button" data-role="scout" class="role-btn bg-slate-100 border-2 border-transparent text-slate-700 font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5">
+                            <span>🏕️</span> Pramuka
+                        </button>
+                        <button type="button" data-role="scientist" class="role-btn bg-slate-100 border-2 border-transparent text-slate-700 font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5">
+                            <span>🔬</span> Ilmuwan Muda
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Customization Controls -->
+                <div class="md:col-span-7 space-y-3">
+                    <!-- Player Name -->
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-1">Nama Petualang (Siswa)</label>
+                        <input type="text" id="player-name-input" maxlength="20" placeholder="Ketik namamu di sini..." value="Murid Hebat"
+                            class="w-full px-3.5 py-2 rounded-xl border-2 border-slate-200 focus:border-sky-500 focus:outline-none font-bold text-slate-800 text-sm">
+                    </div>
+
+                    <!-- Color Customizers -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Skin Tone -->
+                        <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                            <span class="block text-xs font-extrabold text-slate-600 mb-1.5">Warna Kulit</span>
+                            <div class="flex gap-1.5 flex-wrap" id="skin-colors">
+                                <button type="button" data-color="#f8d2b4" class="color-swatch w-6 h-6 rounded-full border-2 border-slate-800 scale-110" style="background:#f8d2b4"></button>
+                                <button type="button" data-color="#e5b887" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#e5b887"></button>
+                                <button type="button" data-color="#c68642" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#c68642"></button>
+                                <button type="button" data-color="#8d5524" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#8d5524"></button>
+                            </div>
+                        </div>
+
+                        <!-- Hair / Hijab Color -->
+                        <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                            <span class="block text-xs font-extrabold text-slate-600 mb-1.5">Warna Rambut / Jilbab</span>
+                            <div class="flex gap-1.5 flex-wrap" id="hair-colors">
+                                <button type="button" data-color="#1e1b18" class="color-swatch w-6 h-6 rounded-full border-2 border-slate-800 scale-110" style="background:#1e1b18"></button>
+                                <button type="button" data-color="#4a2c11" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#4a2c11"></button>
+                                <button type="button" data-color="#ffffff" class="color-swatch w-6 h-6 rounded-full border-2 border-slate-300 shadow" style="background:#ffffff"></button>
+                                <button type="button" data-color="#0284c7" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#0284c7"></button>
+                            </div>
+                        </div>
+
+                        <!-- Shirt / Uniform Color -->
+                        <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                            <span class="block text-xs font-extrabold text-slate-600 mb-1.5">Warna Seragam / Baju</span>
+                            <div class="flex gap-1.5 flex-wrap" id="shirt-colors">
+                                <button type="button" data-color="#ffffff" class="color-swatch w-6 h-6 rounded-full border-2 border-slate-800 scale-110" style="background:#ffffff"></button>
+                                <button type="button" data-color="#2563eb" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#2563eb"></button>
+                                <button type="button" data-color="#16a34a" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#16a34a"></button>
+                                <button type="button" data-color="#dc2626" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#dc2626"></button>
+                                <button type="button" data-color="#926c44" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#926c44"></button>
+                            </div>
+                        </div>
+
+                        <!-- Pants / Skirt Color -->
+                        <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                            <span class="block text-xs font-extrabold text-slate-600 mb-1.5">Warna Celana / Rok</span>
+                            <div class="flex gap-1.5 flex-wrap" id="pants-colors">
+                                <button type="button" data-color="#1e3a8a" class="color-swatch w-6 h-6 rounded-full border-2 border-slate-800 scale-110" style="background:#1e3a8a"></button>
+                                <button type="button" data-color="#1e293b" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#1e293b"></button>
+                                <button type="button" data-color="#452c1e" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#452c1e"></button>
+                                <button type="button" data-color="#475569" class="color-swatch w-6 h-6 rounded-full border-2 border-white shadow" style="background:#475569"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accessories Toggles -->
+                    <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                        <span class="block text-xs font-extrabold text-slate-600 mb-1.5">Aksesoris Petualang</span>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold">
+                                <input type="checkbox" id="acc-hat" class="accent-sky-600 w-4 h-4">
+                                <span>👒 Topi Rimba</span>
+                            </label>
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold">
+                                <input type="checkbox" id="acc-glasses" class="accent-sky-600 w-4 h-4">
+                                <span>👓 Kacamata Pintar</span>
+                            </label>
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold">
+                                <input type="checkbox" id="acc-backpack" checked class="accent-sky-600 w-4 h-4">
+                                <span>🎒 Ransel Ekspedisi</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Game Mode Selection: Solo vs Multiplayer Class Room -->
+                    <div class="bg-indigo-50 p-3 rounded-2xl border-2 border-indigo-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-indigo-900">🌐 Mode Permainan</span>
+                            <div class="flex gap-1.5">
+                                <button type="button" id="mode-solo-btn" class="bg-indigo-600 text-white text-xs font-extrabold px-3 py-1 rounded-lg shadow">
+                                    👤 Sendiri (Solo)
+                                </button>
+                                <button type="button" id="mode-multi-btn" class="bg-white text-indigo-800 border border-indigo-300 text-xs font-extrabold px-3 py-1 rounded-lg">
+                                    👥 Multiplayer Kelas
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Multiplayer Room Code Box (Hidden in Solo Mode) -->
+                        <div id="multiplayer-room-box" class="hidden pt-1 border-t border-indigo-200 space-y-1.5">
+                            <div class="flex gap-2">
+                                <input type="text" id="room-code-input" maxlength="10" placeholder="KODE RUANGAN (Cth: IPS7A)" value="IPS7A"
+                                    class="w-full px-3 py-1.5 rounded-xl border-2 border-indigo-300 focus:border-indigo-600 focus:outline-none font-extrabold text-indigo-950 text-xs uppercase tracking-wider">
+                                <button type="button" id="random-room-btn" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-900 font-extrabold text-xs px-3 py-1.5 rounded-xl shrink-0">
+                                    🎲 Acak
+                                </button>
+                            </div>
+                            <p class="text-[11px] font-semibold text-indigo-700 leading-tight">
+                                Bagikan <b>Kode Ruangan</b> yang sama ke teman sekelas! Siswa dalam 1 ruangan akan masuk ke labirin 3D yang sama & saling membantu membuka gerbang.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Start Game Button -> Goes to Rules Screen -->
+                    <div class="pt-1">
+                        <button id="to-rules-btn" type="button" class="btn-roblox w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-game text-base md:text-lg font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2 tracking-wide">
+                            <span>📜</span> LANJUT KE PERATURAN & MISI ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 1B. GAME RULES & MISSION BRIEFING SCREEN ==================== -->
+    <div id="rules-screen" class="fixed inset-0 z-30 hidden flex items-center justify-center p-3 md:p-6 bg-slate-900/85 backdrop-blur-md overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden border-4 border-amber-400 my-auto">
+            <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-4 md:p-5 text-white text-center">
+                <span class="bg-slate-900/30 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">PANDUAN & MISI PETUALANG</span>
+                <h2 class="font-game text-2xl md:text-3xl font-bold mt-1 drop-shadow">Peraturan Permainan & Penilaian</h2>
+                <p class="text-amber-100 text-xs md:text-sm mt-0.5">Baca baik-baik sebelum memasuki labirin 3D!</p>
+            </div>
+
+            <div class="p-5 md:p-6 space-y-4 max-h-[75vh] overflow-y-auto text-sm text-slate-700">
+                <!-- Mission & Quiz Count -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="bg-sky-50 border-2 border-sky-200 p-3.5 rounded-2xl">
+                        <h3 class="font-game font-bold text-sky-800 text-base flex items-center gap-2 mb-1">
+                            <span>🎯</span> Misi Utama Petualangan
+                        </h3>
+                        <p class="text-xs leading-relaxed font-semibold text-slate-600">
+                            Jelajahi labirin 3D menggunakan <b>Peta 2D</b> di pojok kanan atas, buka semua <b>6 Gerbang Terkunci</b>, kumpulkan <b>Kristal Poin SDA</b> sebanyak mungkin, dan capai <b>Monumen Emas Indonesia Maju</b> di ujung labirin!
+                        </p>
+                    </div>
+
+                    <div class="bg-emerald-50 border-2 border-emerald-200 p-3.5 rounded-2xl">
+                        <h3 class="font-game font-bold text-emerald-800 text-base flex items-center gap-2 mb-1">
+                            <span>❓</span> Jumlah Pertanyaan (10 Gerbang)
+                        </h3>
+                        <p class="text-xs leading-relaxed font-semibold text-slate-600">
+                            Terdapat <b>10 Gerbang Kuis Wajib</b> berisi materi IPS Kelas 7. <b>Emas Utama Indonesia Maju</b> di ujung labirin hanya akan terbuka jika <b>semua 10 pertanyaan sudah terjawab benar!</b>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Scoring & Grading System -->
+                <div class="bg-amber-50 border-2 border-amber-300 p-3.5 rounded-2xl">
+                    <h3 class="font-game font-bold text-amber-900 text-base flex items-center gap-2 mb-1.5">
+                        <span>⭐</span> Sistem Poin, Waktu & Nilai Rapor (Skala 0 – 100)
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold">
+                        <div class="bg-white p-2.5 rounded-xl border border-amber-200">
+                            <span class="text-emerald-600 block text-sm">+60 Poin / Gerbang</span>
+                            10 Gerbang = 600 Poin
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-amber-200">
+                            <span class="text-sky-600 block text-sm">+20 Poin / Kristal</span>
+                            15 Kristal = 300 Poin
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-amber-200">
+                            <span class="text-amber-600 block text-sm">Bonus Waktu (Maks 100)</span>
+                            Makin cepat selesai = Nilai makin tinggi!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monsters, Traps, Run & Hide -->
+                <div class="bg-rose-50 border-2 border-rose-200 p-3.5 rounded-2xl">
+                    <h3 class="font-game font-bold text-rose-800 text-base flex items-center gap-2 mb-1.5">
+                        <span>👾</span> Bahaya Labirin: 4 Monster Penjaga, Jebakan, Lari & Sembunyi!
+                    </h3>
+                    <ul class="space-y-1.5 text-xs font-semibold text-slate-700">
+                        <li>• <b>4 Monster Penjaga:</b> 3 monster berpatroli di lorong labirin dan <b>1 monster khusus menjaga ketat Emas Utama</b> di garis akhir.</li>
+                        <li>• <b>Lari Cepat (Sprint):</b> Tahan tombol <b>SHIFT</b> (di PC) atau tombol <b>LARI</b> (di HP) untuk berlari kencang menjauhi monster.</li>
+                        <li>• <b>Bilik Persembunyian (Semak Hijau):</b> Masuklah ke dalam bilik persembunyian di tepi lorong agar monster kehilangan jejakmu.</li>
+                        <li>• <b>Jebakan Lantai:</b> Hindari <b>Jebakan Duri</b> yang muncul berkala dan <b>Kolam Lava</b> merah menyala.</li>
+                    </ul>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-3 pt-1">
+                    <button id="back-to-custom-btn" type="button" class="btn-roblox sm:w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-game font-bold py-3 px-4 rounded-2xl">
+                        ⬅ Ubah Karakter
+                    </button>
+                    <button id="start-game-btn" type="button" class="btn-roblox sm:w-2/3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-game text-lg font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2">
+                        <span>🚀</span> SAYA MENGERTI, MULAI PETUALANGAN!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 2. IN-GAME HUD (HEADS UP DISPLAY) ==================== -->
+    <div id="hud-container" class="fixed inset-0 z-10 pointer-events-none hidden flex flex-col justify-between p-2.5 md:p-4">
+        
+        <!-- Top Bar -->
+        <div class="flex justify-between items-start gap-2">
+            <!-- Left Top: Player Stats, Lives, Stamina & Score -->
+            <div class="bg-slate-900/85 backdrop-blur-md text-white p-3 rounded-2xl border-2 border-white/20 shadow-xl pointer-events-auto flex flex-col gap-1.5 max-w-[58%] sm:max-w-xs">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 truncate">
+                        <span class="bg-amber-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.5 rounded-md">KLS 7</span>
+                        <span id="hud-player-name" class="font-bold text-xs sm:text-sm truncate">Murid Hebat</span>
+                    </div>
+                    <!-- Lives (Hearts) -->
+                    <div id="hud-lives" class="text-sm tracking-tighter shrink-0" title="Nyawa Tersisa">❤️❤️❤️</div>
+                </div>
+
+                <!-- Stamina Bar for Sprinting -->
+                <div class="w-full">
+                    <div class="flex justify-between text-[10px] font-bold text-sky-300 mb-0.5">
+                        <span>⚡ Stamina Lari (Shift)</span>
+                        <span id="hud-stamina-text">100%</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div id="hud-stamina-bar" class="h-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-all duration-75" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <!-- Score, Crystals, Gates & Estimated Grade -->
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] sm:text-xs font-bold pt-0.5 border-t border-white/10">
+                    <div class="text-amber-300">⭐ Poin: <span id="hud-score">0</span></div>
+                    <div class="text-cyan-300">💎 Kristal: <span id="hud-crystals">0/15</span></div>
+                    <div class="text-emerald-400">🚪 Gerbang: <span id="hud-gates">0/10</span></div>
+                    <div class="text-purple-300">📊 Nilai: <span id="hud-grade">0 (D)</span></div>
+                </div>
+
+                <!-- Live Multiplayer Leaderboard (Visible in Multiplayer Mode) -->
+                <div id="hud-multiplayer-panel" class="hidden pt-1.5 border-t border-white/15 space-y-1">
+                    <div class="flex justify-between items-center text-[10px] font-extrabold text-amber-300">
+                        <span>👥 RUANG: <span id="hud-room-code" class="bg-indigo-600 text-white px-1.5 py-0.5 rounded">IPS7A</span></span>
+                        <span id="hud-online-count" class="text-emerald-300">1 Siswa Aktif</span>
+                    </div>
+                    <div id="hud-leaderboard-list" class="max-h-24 overflow-y-auto space-y-1 pr-1 text-[10px] font-bold">
+                        <!-- Live player rankings injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Top: 2D Insert Map & Quick Controls -->
+            <div class="flex flex-col items-end gap-1.5 pointer-events-auto">
+                <div class="flex gap-1">
+                    <button id="expand-map-btn" title="Perbesar / Perkecil Peta 2D" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-2.5 py-1.5 rounded-xl border border-white/40 shadow text-xs font-extrabold flex items-center gap-1">
+                        <span>🗺️</span> <span class="hidden sm:inline">Perbesar Peta</span>
+                    </button>
+                    <button id="toggle-camera-btn" title="Ganti Sudut Kamera" class="bg-slate-900/85 hover:bg-slate-800 text-white p-2 rounded-xl border border-white/20 shadow text-xs font-bold">
+                        🎥
+                    </button>
+                    <button id="toggle-sound-btn" title="Suara" class="bg-slate-900/85 hover:bg-slate-800 text-white p-2 rounded-xl border border-white/20 shadow text-xs font-bold">
+                        🔊
+                    </button>
+                    <button id="help-btn" title="Peraturan & Panduan" class="bg-sky-600 hover:bg-sky-500 text-white p-2 rounded-xl border border-white/20 shadow text-xs font-bold">
+                        📜
+                    </button>
+                </div>
+
+                <!-- 2D Insert Map Container -->
+                <div id="minimap-wrapper" class="bg-slate-900/90 p-2 rounded-2xl border-2 border-sky-400 shadow-2xl transition-all duration-200">
+                    <div class="flex justify-between items-center text-[10px] font-extrabold text-sky-300 mb-1 px-0.5">
+                        <span>🗺️ PETA 2D LABIRIN</span>
+                        <span id="hud-timer" class="text-white">00:00</span>
+                    </div>
+                    <canvas id="minimap-canvas" width="150" height="210" class="rounded-lg block border border-slate-700"></canvas>
+                    <!-- Map Legend -->
+                    <div class="grid grid-cols-3 gap-1 text-[9px] text-slate-300 font-bold mt-1.5 leading-tight">
+                        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-sky-400 inline-block"></i>Kamu</span>
+                        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-purple-400 inline-block"></i>Teman</span>
+                        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-red-500 inline-block"></i>Monster</span>
+                        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-xs bg-amber-400 inline-block"></i>Poin</span>
+                        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-xs bg-emerald-400 inline-block"></i>Sembunyi</span>
+                        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-xs bg-rose-500 inline-block"></i>Gerbang</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Cloud Sync State for Multiplayer Classroom
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let isMultiplayer = false;
+        let roomCode = "IPS7A";
+        let unsubRoomPlayers = null;
+        let unsubRoomState = null;
+        let lastSyncTime = 0;
+        const remotePlayers = {}; // uid -> { mesh, nameTag, data, targetPos, targetRotY }
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        async function initCloudMultiplayer() {
+            try {
+                if (typeof __firebase_config === 'undefined') return;
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                    currentUser = cred.user;
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                }
+            } catch (err) {
+                console.error("Multiplayer init error:", err);
+            }
+        }
+        initCloudMultiplayer();
+
+        // Create Floating Name Sprite Above Remote Player Heads
+        function createPlayerNameSprite(playerName, isWinner = false) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = isWinner ? 'rgba(245, 158, 11, 0.92)' : 'rgba(15, 23, 42, 0.82)';
+            ctx.beginPath();
+            ctx.roundRect(16, 10, 224, 44, 22);
+            ctx.fill();
+
+            ctx.strokeStyle = isWinner ? '#fef08a' : '#38bdf8';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(playerName.slice(0, 16), 128, 33);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(2.4, 0.6, 1);
+            sprite.position.set(0, 3.35, 0);
+            return sprite;
+        }
+
+        function cleanupMultiplayerListeners() {
+            if (unsubRoomPlayers) { unsubRoomPlayers(); unsubRoomPlayers = null; }
+            if (unsubRoomState) { unsubRoomState(); unsubRoomState = null; }
+            Object.keys(remotePlayers).forEach(uid => {
+                if (remotePlayers[uid].mesh && scene) scene.remove(remotePlayers[uid].mesh);
+                delete remotePlayers[uid];
+            });
+        }
+
+        async function joinMultiplayerRoom() {
+            if (!isMultiplayer || !db || !currentUser) return;
+            cleanupMultiplayerListeners();
+
+            const uid = currentUser.uid;
+            const playersCol = collection(db, 'artifacts', appId, 'public', 'data', `maze_players_${roomCode}`);
+            const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'maze_rooms', roomCode);
+
+            // Register self in room
+            await setDoc(doc(playersCol, uid), {
+                uid: uid,
+                name: charConfig.name,
+                config: JSON.stringify(charConfig),
+                x: playerState.pos.x,
+                y: playerState.pos.y,
+                z: playerState.pos.z,
+                rotY: playerState.rotationY,
+                score: 0,
+                gatesOpened: 0,
+                isHidden: false,
+                finished: false,
+                updatedAt: Date.now()
+            }, { merge: true });
+
+            // Listen to Shared Room State (Co-op Unlocked Gates & Collected Crystals)
+            unsubRoomState = onSnapshot(roomDocRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+
+                // Sync shared unlocked gates
+                if (Array.isArray(data.openedGates)) {
+                    let newlyOpened = false;
+                    gates.forEach(g => {
+                        if (data.openedGates.includes(g.id) && !g.isOpen) {
+                            g.isOpen = true;
+                            newlyOpened = true;
+                        }
+                    });
+                    if (newlyOpened) {
+                        gatesOpenedCount = gates.filter(g => g.isOpen).length;
+                        if (gatesOpenedCount >= 10 && finishShieldMesh) {
+                            finishShieldMesh.visible = false;
+                        }
+                        updateHUD();
+                    }
+                }
+
+                // Sync shared collected crystals
+                if (Array.isArray(data.collectedCrystals)) {
+                    collectibles.forEach((item, idx) => {
+                        if (data.collectedCrystals.includes(idx) && !item.collected) {
+                            item.collected = true;
+                            item.mesh.visible = false;
+                        }
+                    });
+                }
+            }, (err) => console.error("Room state listener error:", err));
+
+            // Listen to All Players in Same Classroom
+            unsubRoomPlayers = onSnapshot(playersCol, (snapshot) => {
+                const activeIds = new Set();
+                const allPlayersList = [];
+                const now = Date.now();
+
+                snapshot.forEach(docSnap => {
+                    const p = docSnap.data();
+                    // Ignore stale disconnected sessions (> 45 seconds inactive)
+                    if (now - (p.updatedAt || 0) > 45000 && p.uid !== uid) return;
+
+                    activeIds.add(p.uid);
+                    allPlayersList.push(p);
+
+                    if (p.uid === uid) return; // Skip self 3D avatar
+
+                    if (!remotePlayers[p.uid]) {
+                        let parsedCfg = charConfig;
+                        try { parsedCfg = JSON.parse(p.config); } catch (e) {}
+                        const avatarMesh = createBlockyCharacter(parsedCfg);
+                        avatarMesh.scale.set(0.68, 0.68, 0.68);
+                        const nameSprite = createPlayerNameSprite(p.name || "Teman", p.finished);
+                        avatarMesh.add(nameSprite);
+                        avatarMesh.position.set(p.x || 0, p.y || 0, p.z || 0);
+                        scene.add(avatarMesh);
+
+                        remotePlayers[p.uid] = {
+                            mesh: avatarMesh,
+                            nameSprite: nameSprite,
+                            data: p,
+                            targetPos: new THREE.Vector3(p.x || 0, p.y || 0, p.z || 0),
+                            targetRotY: p.rotY || 0,
+                            walkCycle: 0
+                        };
+                    } else {
+                        const rp = remotePlayers[p.uid];
+                        rp.data = p;
+                        rp.targetPos.set(p.x || 0, p.y || 0, p.z || 0);
+                        rp.targetRotY = p.rotY || 0;
+                    }
+                });
+
+                // Remove players who left the room
+                Object.keys(remotePlayers).forEach(existingUid => {
+                    if (!activeIds.has(existingUid)) {
+                        scene.remove(remotePlayers[existingUid].mesh);
+                        delete remotePlayers[existingUid];
+                    }
+                });
+
+                // Update Live Classroom Leaderboard UI
+                renderMultiplayerLeaderboard(allPlayersList, uid);
+            }, (err) => console.error("Players listener error:", err));
+        }
+
+        function renderMultiplayerLeaderboard(playersList, selfUid) {
+            const countEl = document.getElementById('hud-online-count');
+            const listEl = document.getElementById('hud-leaderboard-list');
+            if (!countEl || !listEl) return;
+
+            playersList.sort((a, b) => (b.score || 0) - (a.score || 0));
+            countEl.textContent = `${playersList.length} Siswa Aktif`;
+
+            listEl.innerHTML = playersList.map((p, i) => {
+                const isMe = p.uid === selfUid;
+                const statusIcon = p.finished ? '🏆' : (i === 0 ? '👑' : '🧭');
+                return `
+                    <div class="flex justify-between items-center px-2 py-0.5 rounded ${isMe ? 'bg-sky-500/30 text-sky-200 border border-sky-400/40' : 'bg-white/5 text-slate-200'}">
+                        <span class="truncate max-w-[125px]">${statusIcon} ${p.name || 'Siswa'} ${isMe ? '(Kamu)' : ''}</span>
+                        <span class="text-amber-300 shrink-0">${p.score || 0} pts</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function syncLocalPlayerToCloud(finished = false) {
+            if (!isMultiplayer || !db || !currentUser) return;
+            const now = Date.now();
+            if (!finished && now - lastSyncTime < 180) return; // Throttle ~5.5 updates/sec
+            lastSyncTime = now;
+
+            try {
+                const uid = currentUser.uid;
+                const playerDocRef = doc(db, 'artifacts', appId, 'public', 'data', `maze_players_${roomCode}`, uid);
+                await setDoc(playerDocRef, {
+                    uid: uid,
+                    name: charConfig.name,
+                    x: Number(playerState.pos.x.toFixed(2)),
+                    y: Number(playerState.pos.y.toFixed(2)),
+                    z: Number(playerState.pos.z.toFixed(2)),
+                    rotY: Number(playerState.rotationY.toFixed(2)),
+                    score: score,
+                    gatesOpened: gatesOpenedCount,
+                    isHidden: isPlayerHidden,
+                    finished: finished,
+                    updatedAt: now
+                }, { merge: true });
+            } catch (e) {}
+        }
+
+        async function syncSharedWorldProgress() {
+            if (!isMultiplayer || !db || !currentUser) return;
+            try {
+                const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'maze_rooms', roomCode);
+                const openedGates = gates.filter(g => g.isOpen).map(g => g.id);
+                const collectedCrystals = collectibles.map((c, i) => c.collected ? i : -1).filter(i => i !== -1);
+                await setDoc(roomDocRef, {
+                    openedGates: openedGates,
+                    collectedCrystals: collectedCrystals,
+                    updatedAt: Date.now()
+                }, { merge: true });
+            } catch (e) {}
+        }
+
+        function updateRemotePlayers(dt) {
+            Object.values(remotePlayers).forEach(rp => {
+                const moveDist = rp.mesh.position.distanceTo(rp.targetPos);
+                rp.mesh.position.lerp(rp.targetPos, Math.min(1, dt * 12));
+
+                let diff = rp.targetRotY - rp.mesh.rotation.y;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                rp.mesh.rotation.y += diff * Math.min(1, dt * 12);
+
+                if (moveDist > 0.04) {
+                    rp.walkCycle += dt * 14;
+                    const swing = Math.sin(rp.walkCycle) * 0.6;
+                    rp.mesh.userData.leftLeg.rotation.x = swing;
+                    rp.mesh.userData.rightLeg.rotation.x = -swing;
+                    rp.mesh.userData.leftArm.rotation.x = -swing * 0.8;
+                    rp.mesh.userData.rightArm.rotation.x = swing * 0.8;
+                } else {
+                    rp.mesh.userData.leftLeg.rotation.x *= 0.8;
+                    rp.mesh.userData.rightLeg.rotation.x *= 0.8;
+                    rp.mesh.userData.leftArm.rotation.x *= 0.8;
+                    rp.mesh.userData.rightArm.rotation.x *= 0.8;
+                }
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 1. SOUND EFFECTS ENGINE (WEB AUDIO API - NO EXTERNAL FILES NEEDED)
+         * ============================================================================
+         */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq, type, duration, vol = 0.15, slideFreq = null) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (slideFreq) {
+                    osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+                }
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+            playJump() {
+                this.playTone(220, 'sine', 0.22, 0.15, 480);
+            }
+            playStep() {
+                this.playTone(110 + Math.random() * 30, 'triangle', 0.06, 0.05);
+            }
+            playCorrect() {
+                this.playTone(523.25, 'triangle', 0.15, 0.2); // C5
+                setTimeout(() => this.playTone(659.25, 'triangle', 0.15, 0.2), 110); // E5
+                setTimeout(() => this.playTone(783.99, 'triangle', 0.3, 0.22), 220); // G5
+            }
+            playWrong() {
+                this.playTone(200, 'sawtooth', 0.2, 0.18, 140);
+                setTimeout(() => this.playTone(150, 'sawtooth', 0.3, 0.18, 100), 180);
+            }
+            playGateOpen() {
+                this.playTone(180, 'square', 0.5, 0.12, 360);
+            }
+            playVictory() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((n, i) => {
+                    setTimeout(() => this.playTone(n, 'triangle', 0.3, 0.22), i * 140);
+                });
+            }
+            playCoin() {
+                this.playTone(880, 'sine', 0.1, 0.16);
+                setTimeout(() => this.playTone(1174.66, 'sine', 0.18, 0.16), 75);
+            }
+            playHurt() {
+                this.playTone(140, 'sawtooth', 0.35, 0.25, 65);
+            }
+            playMonsterAlert() {
+                this.playTone(110, 'sawtooth', 0.25, 0.18, 95);
+            }
+        }
+        const sfx = new SoundFX();
+
+        /**
+         * ============================================================================
+         * 2. QUESTION BANK (IPS KELAS 7 CURRICULUM)
+         * ============================================================================
+         */
+        const QUESTION_BANK = {
+            "Potensi Sumber Daya Alam Indonesia": [
+                {
+                    q: "Hutan hujan tropis Indonesia dikenal sebagai salah satu 'paru-paru dunia'. Fungsi ekologis utama dari potensi sumber daya hutan tersebut adalah...",
+                    options: [
+                        "Menghasilkan kayu jati untuk ekspor mebel semata",
+                        "Menyerap karbon dioksida, menghasilkan oksigen, dan menjaga tata air",
+                        "Menyediakan lahan luas untuk pembangunan kawasan industri berat",
+                        "Menjadi tempat penambangan mineral logam mulia"
+                    ],
+                    answer: 1,
+                    explanation: "Secara ekologis, hutan berfungsi menyerap gas karbon dioksida (CO2), menghasilkan oksigen (O2), mencegah erosi/banjir, serta menjaga keanekaragaman hayati."
+                },
+                {
+                    q: "Indonesia memiliki potensi sumber daya tambang yang sangat besar seperti nikel, tembaga, dan bauksit. Pulau di Indonesia yang terkenal sebagai penghasil tambang nikel terbesar adalah...",
+                    options: [
+                        "Pulau Jawa dan Bali",
+                        "Pulau Sulawesi dan Maluku Utara",
+                        "Pulau Madura dan Lombok",
+                        "Kepulauan Nusa Tenggara Timur"
+                    ],
+                    answer: 1,
+                    explanation: "Sulawesi (seperti Morowali dan Sorowako) serta Maluku Utara merupakan pusat cadangan nikel terbesar di Indonesia yang penting untuk bahan baku baterai kendaraan listrik."
+                },
+                {
+                    q: "Sebagai negara maritim, Indonesia memiliki ekosistem pesisir berupa hutan mangrove (bakau). Manfaat utama hutan mangrove bagi wilayah pesisir adalah...",
+                    options: [
+                        "Mencegah abrasi pantai dan menjadi tempat pemijahan ikan",
+                        "Menghasilkan garam industri berkualitas tinggi",
+                        "Memperdalam alur pelayaran kapal-kapal besar",
+                        "Menggantikan fungsi terumbu karang di laut dalam"
+                    ],
+                    answer: 0,
+                    explanation: "Akar hutan mangrove mampu menahan gelombang laut sehingga mencegah abrasi, sekaligus menjadi habitat berlindung dan berkembang biak bagi ikan serta udang."
+                },
+                {
+                    q: "Potensi energi terbarukan di Indonesia sangat melimpah karena terletak di jalur cincin api (Ring of Fire) dengan banyak gunung berapi aktif. Sumber energi terbarukan yang dimaksud adalah...",
+                    options: [
+                        "Energi panas bumi (geotermal)",
+                        "Energi batu bara kualitas tinggi",
+                        "Energi minyak bumi lepas pantai",
+                        "Energi nuklir dari uranium"
+                    ],
+                    answer: 0,
+                    explanation: "Indonesia menyimpan sekitar 40% cadangan energi panas bumi (geotermal) dunia berkat banyaknya aktivitas vulkanik gunung berapi."
+                }
+            ],
+            "Penyebab Perubahan Potensi SDA Indonesia": [
+                {
+                    q: "Salah satu faktor utama yang menyebabkan berkurangnya luas lahan pertanian subur di Pulau Jawa dari tahun ke tahun adalah...",
+                    options: [
+                        "Curah hujan yang terlalu tinggi sepanjang tahun",
+                        "Alih fungsi lahan pertanian menjadi permukiman dan kawasan industri",
+                        "Banyaknya petani yang beralih menanam tanaman hidroponik",
+                        "Meningkatnya program reboisasi di wilayah perkotaan"
+                    ],
+                    answer: 1,
+                    explanation: "Pertumbuhan penduduk dan urbanisasi mendorong alih fungsi lahan sawah menjadi perumahan, jalan tol, dan pabrik, sehingga mengurangi potensi produksi pangan."
+                },
+                {
+                    q: "Eksploitasi sumber daya alam secara berlebihan tanpa memperhatikan kelestarian lingkungan dapat mengakibatkan...",
+                    options: [
+                        "Cadangan sumber daya alam semakin melimpah di masa depan",
+                        "Terjadinya kerusakan ekosistem, kelangkaan SDA, dan bencana alam",
+                        "Kualitas udara dan air di sekitar lokasi menjadi semakin bersih",
+                        "Meningkatnya populasi satwa langka di habitat aslinya"
+                    ],
+                    answer: 1,
+                    explanation: "Pengambilan SDA secara serakah (eksploitasi berlebihan) seperti penebangan liar dan tambang ilegal merusak alam, memicu banjir/longsor, dan menghabiskan cadangan SDA."
+                },
+                {
+                    q: "Pertumbuhan jumlah penduduk yang terus meningkat memengaruhi potensi sumber daya alam karena...",
+                    options: [
+                        "Kebutuhan konsumsi pangan, energi, dan lahan meningkat drastis",
+                        "Masyarakat tidak lagi membutuhkan sumber daya alam untuk hidup",
+                        "Sumber daya tambang dapat diperbarui dalam waktu singkat",
+                        "Pencemaran lingkungan otomatis berkurang dengan sendirinya"
+                    ],
+                    answer: 0,
+                    explanation: "Semakin banyak jumlah penduduk, semakin besar pula kebutuhan akan pangan, air bersih, energi, dan tempat tinggal yang menekan ketersediaan SDA."
+                },
+                {
+                    q: "Pencemaran limbah industri dan sampah plastik ke sungai serta laut dapat menurunkan potensi sumber daya perikanan karena...",
+                    options: [
+                        "Ikan menjadi lebih cepat berkembang biak di air keruh",
+                        "Merusak habitat terumbu karang dan meracuni biota laut",
+                        "Menambah kadar oksigen terlarut di dasar perairan",
+                        "Memudahkan nelayan menangkap ikan di tepi pantai"
+                    ],
+                    answer: 1,
+                    explanation: "Limbah beracun dan sampah plastik merusak ekosistem terumbu karang serta membunuh ikan dan biota laut lainnya."
+                }
+            ],
+            "Potensi Bonus Demografi Indonesia": [
+                {
+                    q: "Apa yang dimaksud dengan fenomena 'Bonus Demografi' yang sedang dialami oleh Indonesia?",
+                    options: [
+                        "Jumlah penduduk usia lanjut (di atas 65 tahun) lebih banyak dari anak-anak",
+                        "Jumlah penduduk usia produktif (15–64 tahun) lebih besar dibandingkan usia non-produktif",
+                        "Tingkat kelahiran bayi menurun hingga nol persen setiap tahun",
+                        "Seluruh penduduk Indonesia bekerja di sektor pertanian tradisional"
+                    ],
+                    answer: 1,
+                    explanation: "Bonus demografi terjadi ketika proporsi penduduk usia produktif (15-64 tahun) mencapai lebih dari 60-70% total populasi, sehingga beban ketergantungan menjadi rendah."
+                },
+                {
+                    q: "Agar bonus demografi benar-benar menjadi peluang emas bagi kemajuan Indonesia dan bukan menjadi beban pengangguran, langkah utama yang harus dilakukan adalah...",
+                    options: [
+                        "Membatasi akses generasi muda terhadap teknologi digital",
+                        "Meningkatkan kualitas pendidikan, kesehatan, dan keterampilan kerja SDM",
+                        "Mengurangi jumlah sekolah kejuruan dan perguruan tinggi",
+                        "Mengandalkan tenaga kerja asing untuk semua sektor industri"
+                    ],
+                    answer: 1,
+                    explanation: "Bonus demografi hanya bermanfaat jika penduduk usia produktif memiliki pendidikan tinggi, sehat, terampil, dan kreatif sehingga mampu bersaing di dunia kerja."
+                },
+                {
+                    q: "Sebagai pelajar kelas 7 SMP, cara terbaik yang dapat kamu lakukan untuk menyambut puncak bonus demografi Indonesia adalah...",
+                    options: [
+                        "Belajar tekun, menguasai literasi digital, dan melatih kreativitas",
+                        "Menunggu lulus sekolah baru mulai memikirkan masa depan",
+                        "Menghindari kegiatan ekstrakurikuler dan kerja kelompok",
+                        "Hanya menghafal teori tanpa mau mencoba hal-hal baru"
+                    ],
+                    answer: 0,
+                    explanation: "Siswa SMP saat ini akan berada pada puncak usia produktif di tahun 2035–2045. Membekali diri dengan ilmu, karakter, dan keterampilan sejak dini adalah kuncinya!"
+                },
+                {
+                    q: "Jika bonus demografi tidak diimbangi dengan penyediaan lapangan kerja dan kualitas SDM yang memadai, risiko yang dapat terjadi adalah...",
+                    options: [
+                        "Pendapatan per kapita masyarakat meningkat pesat",
+                        "Meningkatnya angka pengangguran dan beban sosial negara",
+                        "Seluruh wilayah pedesaan berubah menjadi pusat teknologi",
+                        "Berkurangnya kebutuhan fasilitas pendidikan dan kesehatan"
+                    ],
+                    answer: 1,
+                    explanation: "Tanpa pendidikan dan lapangan kerja yang cukup, melimpahnya penduduk usia produktif justru dapat memicu tingginya pengangguran."
+                }
+            ],
+            "Potensi Indonesia Menjadi Negara Maju": [
+                {
+                    q: "Kebijakan 'Hilirisasi Industri' terhadap sumber daya tambang seperti nikel bertujuan untuk...",
+                    options: [
+                        "Menjual bahan mentah ke luar negeri dengan harga semurah mungkin",
+                        "Mengolah bahan mentah di dalam negeri agar memiliki nilai tambah ekonomi tinggi",
+                        "Menghentikan seluruh kegiatan industri manufaktur di Indonesia",
+                        "Mengimpor barang jadi dari luar negeri secara besar-besaran"
+                    ],
+                    answer: 1,
+                    explanation: "Hilirisasi mengolah bahan mentah (misal bijih nikel menjadi baterai listrik) di dalam negeri sehingga menciptakan lapangan kerja dan meningkatkan nilai ekspor berkali lipat."
+                },
+                {
+                    q: "Letak geografis Indonesia yang berada di posisi silang antara dua benua (Asia dan Australia) serta dua samudra (Hindia dan Pasifik) memberikan keuntungan strategis yaitu...",
+                    options: [
+                        "Indonesia terisolasi dari pergaulan internasional",
+                        "Menjadi jalur persimpangan perdagangan dan pelayaran dunia yang ramai",
+                        "Indonesia tidak perlu menjalin kerja sama ekonomi dengan negara lain",
+                        "Iklim di Indonesia menjadi sangat dingin sepanjang tahun"
+                    ],
+                    answer: 1,
+                    explanation: "Posisi silang menjadikan Indonesia sebagai poros maritim dan jalur lalu lintas perdagangan internasional yang sangat strategis bagi pertumbuhan ekonomi."
+                },
+                {
+                    q: "Selain kekayaan alam dan posisi geografis, ciri utama negara maju yang harus dicapai Indonesia pada visi Indonesia Emas 2045 adalah...",
+                    options: [
+                        "Tingginya penguasaan ilmu pengetahuan, teknologi (IPTEK), dan pendapatan per kapita",
+                        "Sebagian besar penduduk bekerja sebagai buruh kasar tanpa keahlian",
+                        "Ketergantungan penuh pada ekspor bahan mentah tanpa pengolahan",
+                        "Rendahnya tingkat pendidikan dan fasilitas kesehatan masyarakat"
+                    ],
+                    answer: 0,
+                    explanation: "Negara maju ditandai oleh penguasaan IPTEK yang tinggi, inovasi industri, kualitas SDM unggul, serta tingkat kesejahteraan (pendapatan per kapita) yang tinggi."
+                },
+                {
+                    q: "Pembangunan infrastruktur konektivitas seperti tol laut, pelabuhan, dan jaringan internet ke seluruh pelosok Nusantara mendukung Indonesia menjadi negara maju karena...",
+                    options: [
+                        "Mempercepat distribusi barang, menurunkan biaya logistik, dan memeratakan ekonomi",
+                        "Membatasi mobilitas penduduk antar pulau di Indonesia",
+                        "Membuat harga kebutuhan pokok di luar Pulau Jawa semakin mahal",
+                        "Mengurangi minat investor untuk membangun industri di daerah"
+                    ],
+                    answer: 0,
+                    explanation: "Konektivitas antarpulau memperlancar arus perdagangan domestik maupun ekspor dan mempercepat pemerataan pembangunan ekonomi nasional."
+                }
+            ]
+        };
+
+        /**
+         * ============================================================================
+         * 3. CHARACTER CUSTOMIZATION & 3D BLOCKY BUILDER (ROBLOX-STYLE)
+         * ============================================================================
+         */
+        const charConfig = {
+            name: "Murid Hebat",
+            role: "boy",
+            skin: "#f8d2b4",
+            hair: "#1e1b18",
+            shirt: "#ffffff",
+            pants: "#1e3a8a",
+            hat: false,
+            glasses: false,
+            backpack: true
+        };
+
+        function createBlockyCharacter(config) {
+            const root = new THREE.Group();
+
+            const matSkin = new THREE.MeshLambertMaterial({ color: config.skin });
+            const matShirt = new THREE.MeshLambertMaterial({ color: config.shirt });
+            const matPants = new THREE.MeshLambertMaterial({ color: config.pants });
+            const matHair = new THREE.MeshLambertMaterial({ color: config.hair });
+            const matShoe = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+
+            // Torso (Body)
+            const torsoGeo = new THREE.BoxGeometry(1.0, 1.15, 0.55);
+            const torso = new THREE.Mesh(torsoGeo, matShirt);
+            torso.position.y = 1.45;
+            torso.castShadow = true;
+            torso.receiveShadow = true;
+            root.add(torso);
+
+            // Tie / Scarf detail based on role
+            if (config.role === 'scout') {
+                const scarfGeo = new THREE.BoxGeometry(1.04, 0.25, 0.59);
+                const scarfMat = new THREE.MeshLambertMaterial({ color: 0xdc2626 });
+                const scarf = new THREE.Mesh(scarfGeo, scarfMat);
+                scarf.position.y = 0.48;
+                torso.add(scarf);
+            } else if (config.role === 'scientist') {
+                // Lab coat stripe
+                const coatGeo = new THREE.BoxGeometry(1.03, 1.16, 0.57);
+                const coatMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
+                const coat = new THREE.Mesh(coatGeo, coatMat);
+                torso.add(coat);
+                const shirtInner = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.17, 0.59), matShirt);
+                torso.add(shirtInner);
+            } else {
+                // School tie
+                const tieGeo = new THREE.BoxGeometry(0.16, 0.65, 0.05);
+                const tieMat = new THREE.MeshLambertMaterial({ color: 0x1e3a8a });
+                const tie = new THREE.Mesh(tieGeo, tieMat);
+                tie.position.set(0, 0.15, 0.28);
+                torso.add(tie);
+            }
+
+            // Head
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 2.42;
+            const headGeo = new THREE.BoxGeometry(0.78, 0.78, 0.78);
+            const head = new THREE.Mesh(headGeo, matSkin);
+            head.castShadow = true;
+            headGroup.add(head);
+
+            // Eyes & Smile (Roblox classic face style)
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.14, 0.04);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111827 });
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.17, 0.06, 0.4);
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.17, 0.06, 0.4);
+            headGroup.add(leftEye, rightEye);
+
+            const smileGeo = new THREE.BoxGeometry(0.28, 0.06, 0.04);
+            const smile = new THREE.Mesh(smileGeo, eyeMat);
+            smile.position.set(0, -0.15, 0.4);
+            headGroup.add(smile);
+
+            // Hair / Hijab
+            if (config.role === 'girl') {
+                // Longer hair / Hijab style block
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.25, 0.84), matHair);
+                hairTop.position.set(0, 0.34, 0);
+                const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.85, 0.32), matHair);
+                hairBack.position.set(0, -0.02, -0.28);
+                const hairLeft = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.75, 0.6), matHair);
+                hairLeft.position.set(-0.38, -0.05, -0.05);
+                const hairRight = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.75, 0.6), matHair);
+                hairRight.position.set(0.38, -0.05, -0.05);
+                headGroup.add(hairTop, hairBack, hairLeft, hairRight);
+            } else {
+                // Short blocky hair
+                const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.22, 0.82), matHair);
+                hairTop.position.set(0, 0.35, 0);
+                const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.45, 0.2), matHair);
+                hairBack.position.set(0, 0.15, -0.33);
+                headGroup.add(hairTop, hairBack);
+            }
+
+            // Accessory: Explorer Hat
+            if (config.hat) {
+                const hatMat = new THREE.MeshLambertMaterial({ color: 0xb45309 });
+                const brim = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, 1.25), hatMat);
+                brim.position.y = 0.44;
+                const crown = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.32, 0.75), hatMat);
+                crown.position.y = 0.62;
+                const band = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.08, 0.78), new THREE.MeshLambertMaterial({ color: 0xdc2626 }));
+                band.position.y = 0.5;
+                headGroup.add(brim, crown, band);
+            }
+
+            // Accessory: Smart Glasses
+            if (config.glasses) {
+                const frameMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+                const lensMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 });
+                const gLeft = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.06), frameMat);
+                gLeft.position.set(-0.18, 0.06, 0.41);
+                const gRight = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.06), frameMat);
+                gRight.position.set(0.18, 0.06, 0.41);
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.06), frameMat);
+                bridge.position.set(0, 0.08, 0.41);
+                const l1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.07), lensMat);
+                l1.position.copy(gLeft.position);
+                const l2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.07), lensMat);
+                l2.position.copy(gRight.position);
+                headGroup.add(gLeft, gRight, bridge, l1, l2);
+            }
+
+            root.add(headGroup);
+
+            // Accessory: Expedition Backpack
+            if (config.backpack) {
+                const packMat = new THREE.MeshLambertMaterial({ color: 0xea580c });
+                const pack = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.85, 0.38), packMat);
+                pack.position.set(0, 1.48, -0.45);
+                pack.castShadow = true;
+                const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.12), new THREE.MeshLambertMaterial({ color: 0xfacc15 }));
+                pocket.position.set(0, -0.15, -0.22);
+                pack.add(pocket);
+                root.add(pack);
+            }
+
+            // Arms (Pivot at shoulder)
+            const leftArmPivot = new THREE.Group();
+            leftArmPivot.position.set(-0.72, 1.95, 0);
+            const leftSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.45, 0.45), matShirt);
+            leftSleeve.position.y = -0.2;
+            const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.65, 0.42), matSkin);
+            leftArm.position.y = -0.72;
+            leftArm.castShadow = true;
+            leftArmPivot.add(leftSleeve, leftArm);
+            root.add(leftArmPivot);
+
+            const rightArmPivot = new THREE.Group();
+            rightArmPivot.position.set(0.72, 1.95, 0);
+            const rightSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.45, 0.45), matShirt);
+            rightSleeve.position.y = -0.2;
+            const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.65, 0.42), matSkin);
+            rightArm.position.y = -0.72;
+            rightArm.castShadow = true;
+            rightArmPivot.add(rightSleeve, rightArm);
+            root.add(rightArmPivot);
+
+            // Legs (Pivot at hip)
+            const leftLegPivot = new THREE.Group();
+            leftLegPivot.position.set(-0.26, 0.88, 0);
+            const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.72, 0.48), matPants);
+            leftLeg.position.y = -0.36;
+            leftLeg.castShadow = true;
+            const leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.18, 0.54), matShoe);
+            leftShoe.position.set(0, -0.79, 0.03);
+            leftLegPivot.add(leftLeg, leftShoe);
+            root.add(leftLegPivot);
+
+            const rightLegPivot = new THREE.Group();
+            rightLegPivot.position.set(0.26, 0.88, 0);
+            const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.72, 0.48), matPants);
+            rightLeg.position.y = -0.36;
+            rightLeg.castShadow = true;
+            const rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.18, 0.54), matShoe);
+            rightShoe.position.set(0, -0.79, 0.03);
+            rightLegPivot.add(rightLeg, rightShoe);
+            root.add(rightLegPivot);
+
+            // Save references for animation
+            root.userData = {
+                leftArm: leftArmPivot,
+                rightArm: rightArmPivot,
+                leftLeg: leftLegPivot,
+                rightLeg: rightLegPivot,
+                head: headGroup
+            };
+
+            return root;
+        }
+
+        /**
+         * ============================================================================
+         * 4. CHARACTER CUSTOMIZATION PREVIEW SCENE
+         * ============================================================================
+         */
+        let previewScene, previewCamera, previewRenderer, previewCharMesh;
+        let previewAngle = 0.4;
+        let isDraggingPreview = false;
+        let prevMouseX = 0;
+
+        function initPreviewScene() {
+            const container = document.getElementById('preview-canvas-container');
+            previewScene = new THREE.Scene();
+
+            previewCamera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 100);
+            previewCamera.position.set(0, 2.0, 5.2);
+            previewCamera.lookAt(0, 1.45, 0);
+
+            previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            previewRenderer.setSize(container.clientWidth, container.clientHeight);
+            previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(previewRenderer.domElement);
+
+            // Lights
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.1);
+            previewScene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(4, 8, 5);
+            previewScene.add(dirLight);
+
+            // Pedestal Block (Roblox Stud Platform)
+            const baseGeo = new THREE.CylinderGeometry(1.4, 1.5, 0.3, 16);
+            const baseMat = new THREE.MeshLambertMaterial({ color: 0x10b981 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = -0.15;
+            previewScene.add(base);
+
+            rebuildPreviewCharacter();
+
+            // Drag to rotate preview character
+            const dom = previewRenderer.domElement;
+            dom.addEventListener('mousedown', (e) => { isDraggingPreview = true; prevMouseX = e.clientX; });
+            window.addEventListener('mouseup', () => { isDraggingPreview = false; });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDraggingPreview) return;
+                previewAngle += (e.clientX - prevMouseX) * 0.015;
+                prevMouseX = e.clientX;
+            });
+
+            dom.addEventListener('touchstart', (e) => {
+                isDraggingPreview = true;
+                prevMouseX = e.touches[0].clientX;
+            }, { passive: true });
+            window.addEventListener('touchend', () => { isDraggingPreview = false; });
+            window.addEventListener('touchmove', (e) => {
+                if (!isDraggingPreview) return;
+                previewAngle += (e.touches[0].clientX - prevMouseX) * 0.015;
+                prevMouseX = e.touches[0].clientX;
+            }, { passive: true });
+        }
+
+        function rebuildPreviewCharacter() {
+            if (previewCharMesh) previewScene.remove(previewCharMesh);
+            previewCharMesh = createBlockyCharacter(charConfig);
+            previewScene.add(previewCharMesh);
+        }
+
+        // Bind Customization UI Events
+        function setupCustomizationUI() {
+            const nameInput = document.getElementById('player-name-input');
+            const nameTag = document.getElementById('preview-name-tag');
+            nameInput.addEventListener('input', () => {
+                const val = nameInput.value.trim() || "Murid Hebat";
+                charConfig.name = val;
+                nameTag.textContent = val;
+            });
+
+            // Role presets
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.role-btn').forEach(b => {
+                        b.classList.remove('active', 'bg-sky-100', 'border-sky-500', 'text-sky-900');
+                        b.classList.add('bg-slate-100', 'border-transparent', 'text-slate-700');
+                    });
+                    btn.classList.add('active', 'bg-sky-100', 'border-sky-500', 'text-sky-900');
+                    btn.classList.remove('bg-slate-100', 'border-transparent', 'text-slate-700');
+
+                    const role = btn.dataset.role;
+                    charConfig.role = role;
+
+                    // Apply thematic defaults for role
+                    if (role === 'scout') {
+                        charConfig.shirt = '#926c44';
+                        charConfig.pants = '#452c1e';
+                        charConfig.hat = true;
+                        document.getElementById('acc-hat').checked = true;
+                    } else if (role === 'scientist') {
+                        charConfig.shirt = '#0284c7';
+                        charConfig.pants = '#1e293b';
+                        charConfig.glasses = true;
+                        document.getElementById('acc-glasses').checked = true;
+                    } else {
+                        charConfig.shirt = '#ffffff';
+                        charConfig.pants = '#1e3a8a';
+                    }
+                    sfx.playStep();
+                    rebuildPreviewCharacter();
+                });
+            });
+
+            // Color swatches helper
+            function bindSwatches(containerId, prop) {
+                const container = document.getElementById(containerId);
+                container.querySelectorAll('.color-swatch').forEach(swatch => {
+                    swatch.addEventListener('click', () => {
+                        container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('border-slate-800', 'scale-110'));
+                        swatch.classList.add('border-slate-800', 'scale-110');
+                        charConfig[prop] = swatch.dataset.color;
+                        sfx.playStep();
+                        rebuildPreviewCharacter();
+                    });
+                });
+            }
+            bindSwatches('skin-colors', 'skin');
+            bindSwatches('hair-colors', 'hair');
+            bindSwatches('shirt-colors', 'shirt');
+            bindSwatches('pants-colors', 'pants');
+
+            // Accessories
+            document.getElementById('acc-hat').addEventListener('change', (e) => {
+                charConfig.hat = e.target.checked;
+                rebuildPreviewCharacter();
+            });
+            document.getElementById('acc-glasses').addEventListener('change', (e) => {
+                charConfig.glasses = e.target.checked;
+                rebuildPreviewCharacter();
+            });
+            document.getElementById('acc-backpack').addEventListener('change', (e) => {
+                charConfig.backpack = e.target.checked;
+                rebuildPreviewCharacter();
+            });
+
+            // Solo vs Multiplayer Mode Toggle
+            const soloBtn = document.getElementById('mode-solo-btn');
+            const multiBtn = document.getElementById('mode-multi-btn');
+            const roomBox = document.getElementById('multiplayer-room-box');
+            const roomInput = document.getElementById('room-code-input');
+
+            soloBtn.addEventListener('click', () => {
+                isMultiplayer = false;
+                soloBtn.className = "bg-indigo-600 text-white text-xs font-extrabold px-3 py-1 rounded-lg shadow";
+                multiBtn.className = "bg-white text-indigo-800 border border-indigo-300 text-xs font-extrabold px-3 py-1 rounded-lg";
+                roomBox.classList.add('hidden');
+                sfx.playStep();
+            });
+
+            multiBtn.addEventListener('click', () => {
+                isMultiplayer = true;
+                multiBtn.className = "bg-indigo-600 text-white text-xs font-extrabold px-3 py-1 rounded-lg shadow";
+                soloBtn.className = "bg-white text-indigo-800 border border-indigo-300 text-xs font-extrabold px-3 py-1 rounded-lg";
+                roomBox.classList.remove('hidden');
+                sfx.playStep();
+            });
+
+            roomInput.addEventListener('input', () => {
+                roomCode = (roomInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')) || "IPS7A";
+                roomInput.value = roomCode;
+            });
+
+            document.getElementById('random-room-btn').addEventListener('click', () => {
+                const randomCode = "KLS" + Math.floor(100 + Math.random() * 900);
+                roomInput.value = randomCode;
+                roomCode = randomCode;
+                sfx.playStep();
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 5. 3D MAZE MAP DESIGN, COLLECTIBLES, HIDING SPOTS, TRAPS & 4 MONSTERS
+         * ============================================================================
+         * Legend:
+         * 1 = Wall
+         * 0 = Path
+         * S = Start Position
+         * G1..G10 = 10 Locked Quiz Gates
+         * C = Collectible SDA Point Crystal (+20 pts)
+         * H = Hiding Spot (Safe Bush / Shelter)
+         * T = Floor Spike Trap
+         * L = Lava Pool Trap
+         * M = Patrol Monster (3 total)
+         * MG = Gold Guardian Monster (1 total, strictly guards Final Gold)
+         * F = Final Gold Monument (Unlocks after all 10 Gates are opened!)
+         */
+        const CELL_SIZE = 3.8;
+        const WALL_HEIGHT = 3.3;
+
+        const MAZE_GRID = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 'S', 0, 'C', 1, 'C', 0, 0, 1, 0, 'H', 0, 0, 'C', 1],
+            [1, 1, 1, 'G1', 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+            [1, 'C', 0, 0, 'H', 0, 1, 'G2', 0, 0, 1, 'C', 0, 0, 1],
+            [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 'G3', 1, 1, 1],
+            [1, 0, 'T', 0, 1, 'C', 0, 'M', 1, 0, 1, 0, 'T', 'C', 1],
+            [1, 1, 1, 'G4', 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+            [1, 'C', 0, 0, 0, 0, 1, 'H', 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 'G5', 1, 0, 1],
+            [1, 'G6', 1, 'C', 0, 'L', 0, 0, 'M', 0, 1, 'H', 0, 'C', 1],
+            [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 'G7', 1],
+            [1, 0, 'H', 0, 1, 'C', 0, 0, 1, 0, 'T', 0, 1, 0, 1],
+            [1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+            [1, 'C', 0, 0, 0, 0, 1, 'G8', 0, 'C', 1, 0, 'H', 0, 1],
+            [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+            [1, 0, 'T', 0, 1, 'H', 0, 'M', 0, 0, 0, 'G9', 1, 'C', 1],
+            [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+            [1, 'C', 0, 0, 0, 0, 1, 'C', 0, 'L', 1, 0, 0, 'G10', 1],
+            [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+            [1, 'C', 0, 'H', 0, 'T', 0, 0, 1, 'C', 0, 'MG', 0, 'F', 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+
+        const GATE_TOPICS = {
+            'G1': { num: 1, topic: "Potensi Sumber Daya Alam Indonesia", color: 0x10b981 },
+            'G2': { num: 2, topic: "Potensi Sumber Daya Alam Indonesia", color: 0x059669 },
+            'G3': { num: 3, topic: "Potensi Sumber Daya Alam Indonesia", color: 0x14b8a6 },
+            'G4': { num: 4, topic: "Penyebab Perubahan Potensi SDA Indonesia", color: 0xf59e0b },
+            'G5': { num: 5, topic: "Penyebab Perubahan Potensi SDA Indonesia", color: 0xd97706 },
+            'G6': { num: 6, topic: "Penyebab Perubahan Potensi SDA Indonesia", color: 0xea580c },
+            'G7': { num: 7, topic: "Potensi Bonus Demografi Indonesia", color: 0x3b82f6 },
+            'G8': { num: 8, topic: "Potensi Bonus Demografi Indonesia", color: 0x2563eb },
+            'G9': { num: 9, topic: "Potensi Indonesia Menjadi Negara Maju", color: 0x8b5cf6 },
+            'G10': { num: 10, topic: "Potensi Indonesia Menjadi Negara Maju", color: 0x7c3aed }
+        };
+
+        // Procedural Roblox Stud Texture
+        function createStudTexture(baseColorHex, studColorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = baseColorHex;
+            ctx.fillRect(0, 0, 128, 128);
+
+            // Subtle grid border
+            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, 128, 128);
+
+            // Draw 4x4 Roblox-style studs
+            ctx.fillStyle = studColorHex;
+            for (let x = 16; x < 128; x += 32) {
+                for (let y = 16; y < 128; y += 32) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        /**
+         * ============================================================================
+         * 6. MAIN 3D GAME ENGINE
+         * ============================================================================
+         */
+        let scene, camera, renderer;
+        let playerMesh;
+        let wallColliders = [];
+        let gates = [];
+        let collectibles = [];
+        let hidingSpots = [];
+        let traps = [];
+        let monsters = [];
+        let finishObject = null;
+        let finishShieldMesh = null;
+        let finishPos = new THREE.Vector3();
+        let clouds = [];
+
+        // Game State
+        let isGameRunning = false;
+        let isQuizOpen = false;
+        let activeGate = null;
+        let currentQuestion = null;
+        let usedQuestionIndices = {};
+        let score = 0;
+        let crystalsCollected = 0;
+        let totalCrystals = 0;
+        let gatesOpenedCount = 0;
+        let lives = 3;
+        let invulnerableTimer = 0;
+        let isPlayerHidden = false;
+        let isBeingChased = false;
+        let isMapExpanded = false;
+        let safeCheckpoint = new THREE.Vector3();
+        let startTime = 0;
+        let elapsedSeconds = 0;
+        let timerInterval = null;
+
+        // Player Physics & Camera
+        const playerState = {
+            pos: new THREE.Vector3(),
+            velY: 0,
+            isGrounded: true,
+            rotationY: 0,
+            walkCycle: 0,
+            stepTimer: 0,
+            stamina: 100,
+            isSprinting: false
+        };
+
+        let cameraYaw = Math.PI;
+        let cameraPitch = 0.42;
+        let isFirstPerson = false;
+
+        // Input State
+        const keys = {};
+        let joyVector = { x: 0, y: 0 };
+        let mobileSprintActive = false;
+
+        function initGameWorld() {
+            const canvas = document.getElementById('game-canvas');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x7dd3fc);
+            scene.fog = new THREE.Fog(0x7dd3fc, 28, 75);
+
+            camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 130);
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Lighting
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x166534, 0.85);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.95);
+            dirLight.position.set(35, 65, 35);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 10;
+            dirLight.shadow.camera.far = 150;
+            const d = 55;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // Floor & Wall Textures
+            const grassTex = createStudTexture('#22c55e', '#4ade80');
+            grassTex.repeat.set(28, 36);
+            const floorGeo = new THREE.PlaneGeometry(180, 220);
+            const floorMat = new THREE.MeshLambertMaterial({ map: grassTex });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(32, 0, 45);
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const wallTex = createStudTexture('#475569', '#64748b');
+            const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
+            const hedgeTopTex = createStudTexture('#15803d', '#22c55e');
+            const hedgeMat = new THREE.MeshLambertMaterial({ map: hedgeTopTex });
+
+            const rows = MAZE_GRID.length;
+            const cols = MAZE_GRID[0].length;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = MAZE_GRID[r][c];
+                    const wx = c * CELL_SIZE;
+                    const wz = r * CELL_SIZE;
+
+                    if (cell === 1) {
+                        const wallGeo = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, CELL_SIZE);
+                        const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+                        wallMesh.position.set(wx, WALL_HEIGHT / 2, wz);
+                        wallMesh.castShadow = true;
+                        wallMesh.receiveShadow = true;
+                        scene.add(wallMesh);
+
+                        const capGeo = new THREE.BoxGeometry(CELL_SIZE + 0.12, 0.4, CELL_SIZE + 0.12);
+                        const capMesh = new THREE.Mesh(capGeo, hedgeMat);
+                        capMesh.position.set(wx, WALL_HEIGHT + 0.2, wz);
+                        scene.add(capMesh);
+
+                        const box = new THREE.Box3().setFromCenterAndSize(
+                            new THREE.Vector3(wx, WALL_HEIGHT / 2, wz),
+                            new THREE.Vector3(CELL_SIZE, WALL_HEIGHT, CELL_SIZE)
+                        );
+                        wallColliders.push(box);
+
+                    } else if (cell === 'S') {
+                        playerState.pos.set(wx, 0, wz);
+                        safeCheckpoint.set(wx, 0, wz);
+                        const pad = new THREE.Mesh(
+                            new THREE.CylinderGeometry(1.7, 1.9, 0.14, 16),
+                            new THREE.MeshLambertMaterial({ color: 0x38bdf8 })
+                        );
+                        pad.position.set(wx, 0.07, wz);
+                        scene.add(pad);
+
+                    } else if (typeof cell === 'string' && cell.startsWith('G')) {
+                        createGate(cell, wx, wz, r, c);
+
+                    } else if (cell === 'C') {
+                        createCollectible(wx, wz, r, c);
+
+                    } else if (cell === 'H') {
+                        createHidingSpot(wx, wz, r, c);
+
+                    } else if (cell === 'T') {
+                        createSpikeTrap(wx, wz, r, c);
+
+                    } else if (cell === 'L') {
+                        createLavaTrap(wx, wz, r, c);
+
+                    } else if (cell === 'M') {
+                        createMonster(wx, wz, r, c, false);
+
+                    } else if (cell === 'MG') {
+                        createMonster(wx, wz, r, c, true);
+
+                    } else if (cell === 'F') {
+                        createFinishMonument(wx, wz);
+                    }
+                }
+            }
+
+            totalCrystals = collectibles.length;
+            setupGameControls();
+        }
+
+        // Create Locked Quiz Gate with 3D Frame, Sliding Door & Floating Number Sign
+        function createGate(gateId, wx, wz, r, c) {
+            const info = GATE_TOPICS[gateId];
+            const gateGroup = new THREE.Group();
+            gateGroup.position.set(wx, 0, wz);
+
+            const frameMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+            const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(0.65, WALL_HEIGHT, 0.9), frameMat);
+            leftPillar.position.set(-CELL_SIZE / 2 + 0.35, WALL_HEIGHT / 2, 0);
+            const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(0.65, WALL_HEIGHT, 0.9), frameMat);
+            rightPillar.position.set(CELL_SIZE / 2 - 0.35, WALL_HEIGHT / 2, 0);
+            const topBeam = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.65, 0.9), frameMat);
+            topBeam.position.set(0, WALL_HEIGHT - 0.32, 0);
+            gateGroup.add(leftPillar, rightPillar, topBeam);
+
+            // Door Mesh (Slides up when unlocked)
+            const doorMat = new THREE.MeshLambertMaterial({ color: info.color });
+            const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE - 1.2, WALL_HEIGHT - 0.65, 0.42), doorMat);
+            doorMesh.position.set(0, (WALL_HEIGHT - 0.65) / 2, 0);
+            doorMesh.castShadow = true;
+            gateGroup.add(doorMesh);
+
+            // Signboard with Gate Number
+            const signCanvas = document.createElement('canvas');
+            signCanvas.width = 256;
+            signCanvas.height = 128;
+            const sctx = signCanvas.getContext('2d');
+            sctx.fillStyle = '#fef08a';
+            sctx.fillRect(0, 0, 256, 128);
+            sctx.strokeStyle = '#b45309';
+            sctx.lineWidth = 10;
+            sctx.strokeRect(5, 5, 246, 118);
+            sctx.fillStyle = '#1e293b';
+            sctx.font = 'bold 42px sans-serif';
+            sctx.textAlign = 'center';
+            sctx.fillText(`GERBANG ${info.num}`, 128, 56);
+            sctx.font = 'bold 26px sans-serif';
+            sctx.fillStyle = '#dc2626';
+            sctx.fillText('🔒 JAWAB KUIS', 128, 98);
+
+            const signTex = new THREE.CanvasTexture(signCanvas);
+            const signMat = new THREE.MeshBasicMaterial({ map: signTex });
+            const signBoard = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.15, 0.16), signMat);
+            signBoard.position.set(0, WALL_HEIGHT + 0.7, 0);
+            gateGroup.add(signBoard);
+
+            scene.add(gateGroup);
+
+            const collider = new THREE.Box3().setFromCenterAndSize(
+                new THREE.Vector3(wx, WALL_HEIGHT / 2, wz),
+                new THREE.Vector3(CELL_SIZE, WALL_HEIGHT, CELL_SIZE * 0.7)
+            );
+
+            gates.push({
+                id: gateId,
+                num: info.num,
+                topic: info.topic,
+                pos: new THREE.Vector3(wx, 0, wz),
+                r: r,
+                c: c,
+                doorMesh: doorMesh,
+                collider: collider,
+                isOpen: false,
+                openProgress: 0
+            });
+        }
+
+        // Create Spinning SDA Point Crystal (+25 Points)
+        function createCollectible(wx, wz, r, c) {
+            const group = new THREE.Group();
+            group.position.set(wx, 1.1, wz);
+
+            const gemGeo = new THREE.OctahedronGeometry(0.52, 0);
+            const gemMat = new THREE.MeshLambertMaterial({
+                color: 0xfacc15,
+                emissive: 0xd97706,
+                emissiveIntensity: 0.35
+            });
+            const gem = new THREE.Mesh(gemGeo, gemMat);
+            gem.castShadow = true;
+            group.add(gem);
+
+            const ring = new THREE.Mesh(
+                new THREE.RingGeometry(0.65, 0.85, 16),
+                new THREE.MeshBasicMaterial({ color: 0xfef08a, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+            );
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = -1.02;
+            group.add(ring);
+
+            scene.add(group);
+            collectibles.push({
+                mesh: group,
+                gem: gem,
+                pos: new THREE.Vector3(wx, 0, wz),
+                r: r,
+                c: c,
+                collected: false
+            });
+        }
+
+        // Create Hiding Spot (Safe Bush / Shelter where Monsters cannot see player)
+        function createHidingSpot(wx, wz, r, c) {
+            const group = new THREE.Group();
+            group.position.set(wx, 0, wz);
+
+            // Base mat
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.55, 1.65, 0.12, 16),
+                new THREE.MeshLambertMaterial({ color: 0x059669 })
+            );
+            base.position.y = 0.06;
+            group.add(base);
+
+            // Translucent Leafy Bush / Shelter Wall Ring (open top so player sees themselves inside)
+            const bushMat = new THREE.MeshLambertMaterial({
+                color: 0x10b981,
+                transparent: true,
+                opacity: 0.72
+            });
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const leaf = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.85, 0.9), bushMat);
+                leaf.position.set(Math.cos(angle) * 1.15, 0.95, Math.sin(angle) * 1.15);
+                leaf.rotation.y = -angle;
+                group.add(leaf);
+            }
+
+            scene.add(group);
+            hidingSpots.push({
+                pos: new THREE.Vector3(wx, 0, wz),
+                r: r,
+                c: c,
+                radius: 1.65
+            });
+        }
+
+        // Create Periodic Floor Spike Trap
+        function createSpikeTrap(wx, wz, r, c) {
+            const group = new THREE.Group();
+            group.position.set(wx, 0, wz);
+
+            const plate = new THREE.Mesh(
+                new THREE.BoxGeometry(CELL_SIZE * 0.72, 0.14, CELL_SIZE * 0.72),
+                new THREE.MeshLambertMaterial({ color: 0x334155 })
+            );
+            plate.position.y = 0.07;
+            group.add(plate);
+
+            const spikesGroup = new THREE.Group();
+            const spikeMat = new THREE.MeshLambertMaterial({ color: 0xef4444 });
+            for (let sx = -0.9; sx <= 0.9; sx += 0.9) {
+                for (let sz = -0.9; sz <= 0.9; sz += 0.9) {
+                    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 6), spikeMat);
+                    cone.position.set(sx, 0.55, sz);
+                    spikesGroup.add(cone);
+                }
+            }
+            group.add(spikesGroup);
+            scene.add(group);
+
+            traps.push({
+                type: 'spikes',
+                pos: new THREE.Vector3(wx, 0, wz),
+                spikesGroup: spikesGroup,
+                phase: Math.random() * Math.PI * 2,
+                isActive: false
+            });
+        }
+
+        // Create Glowing Lava Pool Trap
+        function createLavaTrap(wx, wz, r, c) {
+            const lavaGeo = new THREE.BoxGeometry(CELL_SIZE * 0.78, 0.16, CELL_SIZE * 0.78);
+            const lavaMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const lavaMesh = new THREE.Mesh(lavaGeo, lavaMat);
+            lavaMesh.position.set(wx, 0.08, wz);
+            scene.add(lavaMesh);
+
+            traps.push({
+                type: 'lava',
+                pos: new THREE.Vector3(wx, 0, wz),
+                mesh: lavaMesh,
+                isActive: true
+            });
+        }
+
+        // Create 3D Blocky Patrol Monster (3 Patrol + 1 Gold Guardian = 4 Total)
+        function createMonster(wx, wz, r, c, isGoldGuardian = false) {
+            const group = new THREE.Group();
+            group.position.set(wx, 0, wz);
+            group.scale.set(0.75, 0.75, 0.75);
+
+            const bodyMat = new THREE.MeshLambertMaterial({ color: isGoldGuardian ? 0x7f1d1d : 0x1e1b4b });
+            const armorMat = new THREE.MeshLambertMaterial({ color: isGoldGuardian ? 0xb45309 : 0x4c1d95 });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: isGoldGuardian ? 0xfacc15 : 0xff2222 });
+
+            // Bulky Monster Torso
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.5, 0.9), bodyMat);
+            body.position.y = 1.45;
+            body.castShadow = true;
+            group.add(body);
+
+            // Monster Head & Horns
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.95, 0.95), armorMat);
+            head.position.y = 2.6;
+            head.castShadow = true;
+            group.add(head);
+
+            const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.65, 5), eyeMat);
+            hornL.position.set(-0.42, 3.25, 0);
+            hornL.rotation.z = 0.25;
+            const hornR = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.65, 5), eyeMat);
+            hornR.position.set(0.42, 3.25, 0);
+            hornR.rotation.z = -0.25;
+            group.add(hornL, hornR);
+
+            // Glowing Eyes
+            const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.08), eyeMat);
+            eyeL.position.set(-0.24, 2.65, 0.48);
+            const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.08), eyeMat);
+            eyeR.position.set(0.24, 2.65, 0.48);
+            group.add(eyeL, eyeR);
+
+            // Monster Claws / Arms
+            const armL = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.35, 0.42), armorMat);
+            armL.position.set(-0.92, 1.45, 0.25);
+            armL.rotation.x = -0.5;
+            const armR = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.35, 0.42), armorMat);
+            armR.position.set(0.92, 1.45, 0.25);
+            armR.rotation.x = -0.5;
+            group.add(armL, armR);
+
+            scene.add(group);
+
+            monsters.push({
+                mesh: group,
+                spawnPos: new THREE.Vector3(wx, 0, wz),
+                pos: new THREE.Vector3(wx, 0, wz),
+                dir: new THREE.Vector3(1, 0, 0),
+                isChasing: false,
+                isGoldGuardian: isGoldGuardian,
+                walkCycle: 0,
+                armL: armL,
+                armR: armR
+            });
+        }
+
+        function createFinishMonument(wx, wz) {
+            finishPos.set(wx, 0, wz);
+            const group = new THREE.Group();
+            group.position.set(wx, 0, wz);
+
+            const step1 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.3, 2.8), new THREE.MeshLambertMaterial({ color: 0xf59e0b }));
+            step1.position.y = 0.15;
+            const step2 = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.3, 1.9), new THREE.MeshLambertMaterial({ color: 0xfbbf24 }));
+            step2.position.y = 0.45;
+            group.add(step1, step2);
+
+            // Golden Nugget / Treasure Trophy
+            const goldTrophy = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.85, 0),
+                new THREE.MeshLambertMaterial({ color: 0xfacc15, emissive: 0xd97706, emissiveIntensity: 0.5 })
+            );
+            goldTrophy.position.y = 1.75;
+            group.add(goldTrophy);
+
+            // Protective Barrier Cage (Opens ONLY when all 10 gates are answered correctly!)
+            const shieldGeo = new THREE.CylinderGeometry(1.45, 1.45, 3.0, 16);
+            const shieldMat = new THREE.MeshBasicMaterial({
+                color: 0xef4444,
+                transparent: true,
+                opacity: 0.35,
+                wireframe: false
+            });
+            finishShieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            finishShieldMesh.position.y = 1.5;
+            group.add(finishShieldMesh);
+
+            const beam = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.35, 0.35, 22, 12),
+                new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.25 })
+            );
+            beam.position.y = 11;
+            group.add(beam);
+
+            scene.add(group);
+            finishObject = goldTrophy;
+        }
+
+        /**
+         * ============================================================================
+         * 7. CONTROLS (KEYBOARD, MOUSE CAMERA, SPRINT & MOBILE JOYSTICK)
+         * ============================================================================
+         */
+        function setupGameControls() {
+            window.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if (e.code === 'Space' && isGameRunning && !isQuizOpen && playerState.isGrounded) {
+                    playerState.velY = 10.5;
+                    playerState.isGrounded = false;
+                    sfx.playJump();
+                }
+                if (e.code === 'KeyE' && isGameRunning && !isQuizOpen && activeGate && !activeGate.isOpen) {
+                    openGateQuiz(activeGate);
+                }
+            });
+            window.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+
+            // Mobile Sprint Button (Hold to Sprint)
+            const sprintBtn = document.getElementById('mobile-sprint-btn');
+            sprintBtn.addEventListener('touchstart', (e) => { e.preventDefault(); mobileSprintActive = true; }, { passive: false });
+            sprintBtn.addEventListener('touchend', () => { mobileSprintActive = false; });
+            sprintBtn.addEventListener('mousedown', () => { mobileSprintActive = true; });
+            sprintBtn.addEventListener('mouseup', () => { mobileSprintActive = false; });
+
+            // Expand / Collapse 2D Insert Map Button
+            document.getElementById('expand-map-btn').addEventListener('click', (e) => {
+                isMapExpanded = !isMapExpanded;
+                const mapCanvas = document.getElementById('minimap-canvas');
+                if (isMapExpanded) {
+                    mapCanvas.width = 240;
+                    mapCanvas.height = 336;
+                    e.currentTarget.innerHTML = '<span>🗺️</span> <span>Perkecil Peta</span>';
+                } else {
+                    mapCanvas.width = 150;
+                    mapCanvas.height = 210;
+                    e.currentTarget.innerHTML = '<span>🗺️</span> <span class="hidden sm:inline">Perbesar Peta</span>';
+                }
+            });
+            window.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+
+            // Camera Orbit (Mouse & Touch on Canvas)
+            const canvas = document.getElementById('game-canvas');
+            let isRotatingCam = false;
+            let lastCamX = 0;
+            let lastCamY = 0;
+
+            canvas.addEventListener('mousedown', (e) => {
+                if (!isGameRunning || isQuizOpen) return;
+                isRotatingCam = true;
+                lastCamX = e.clientX;
+                lastCamY = e.clientY;
+            });
+            window.addEventListener('mouseup', () => { isRotatingCam = false; });
+            window.addEventListener('mousemove', (e) => {
+                if (!isRotatingCam) return;
+                const dx = e.clientX - lastCamX;
+                const dy = e.clientY - lastCamY;
+                cameraYaw -= dx * 0.007;
+                cameraPitch = Math.max(0.08, Math.min(1.1, cameraPitch + dy * 0.005));
+                lastCamX = e.clientX;
+                lastCamY = e.clientY;
+            });
+
+            // Touch Camera Rotation (Right side of screen)
+            let camTouchId = null;
+            canvas.addEventListener('touchstart', (e) => {
+                if (!isGameRunning || isQuizOpen) return;
+                for (let t of e.changedTouches) {
+                    if (camTouchId === null) {
+                        camTouchId = t.identifier;
+                        lastCamX = t.clientX;
+                        lastCamY = t.clientY;
+                    }
+                }
+            }, { passive: true });
+            canvas.addEventListener('touchmove', (e) => {
+                if (camTouchId === null) return;
+                for (let t of e.changedTouches) {
+                    if (t.identifier === camTouchId) {
+                        const dx = t.clientX - lastCamX;
+                        const dy = t.clientY - lastCamY;
+                        cameraYaw -= dx * 0.008;
+                        cameraPitch = Math.max(0.08, Math.min(1.1, cameraPitch + dy * 0.006));
+                        lastCamX = t.clientX;
+                        lastCamY = t.clientY;
+                    }
+                }
+            }, { passive: true });
+            canvas.addEventListener('touchend', (e) => {
+                for (let t of e.changedTouches) {
+                    if (t.identifier === camTouchId) camTouchId = null;
+                }
+            });
+
+            // Virtual Joystick Logic
+            const joyZone = document.getElementById('joystick-zone');
+            const joyKnob = document.getElementById('joystick-knob');
+            let joyTouchId = null;
+
+            function updateJoystick(clientX, clientY) {
+                const rect = joyZone.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const maxDist = 38;
+
+                let dx = clientX - centerX;
+                let dy = clientY - centerY;
+                const dist = Math.hypot(dx, dy);
+                if (dist > maxDist) {
+                    dx = (dx / dist) * maxDist;
+                    dy = (dy / dist) * maxDist;
+                }
+                joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+                joyVector.x = dx / maxDist;
+                joyVector.y = dy / maxDist;
+            }
+
+            joyZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const t = e.changedTouches[0];
+                joyTouchId = t.identifier;
+                updateJoystick(t.clientX, t.clientY);
+            }, { passive: false });
+
+            joyZone.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                for (let t of e.changedTouches) {
+                    if (t.identifier === joyTouchId) {
+                        updateJoystick(t.clientX, t.clientY);
+                    }
+                }
+            }, { passive: false });
+
+            const resetJoystick = () => {
+                joyTouchId = null;
+                joyKnob.style.transform = `translate(0px, 0px)`;
+                joyVector.x = 0;
+                joyVector.y = 0;
+            };
+            joyZone.addEventListener('touchend', resetJoystick);
+            joyZone.addEventListener('touchcancel', resetJoystick);
+
+            // Mobile Jump & Interact Buttons
+            document.getElementById('mobile-jump-btn').addEventListener('click', () => {
+                if (isGameRunning && !isQuizOpen && playerState.isGrounded) {
+                    playerState.velY = 11.5;
+                    playerState.isGrounded = false;
+                    sfx.playJump();
+                }
+            });
+
+            document.getElementById('mobile-interact-btn').addEventListener('click', () => {
+                if (isGameRunning && !isQuizOpen && activeGate && !activeGate.isOpen) {
+                    openGateQuiz(activeGate);
+                }
+            });
+
+            document.getElementById('open-quiz-btn').addEventListener('click', () => {
+                if (activeGate && !activeGate.isOpen) {
+                    openGateQuiz(activeGate);
+                }
+            });
+
+            // HUD Buttons
+            document.getElementById('toggle-camera-btn').addEventListener('click', () => {
+                isFirstPerson = !isFirstPerson;
+                if (playerMesh) playerMesh.visible = !isFirstPerson;
+            });
+
+            document.getElementById('toggle-sound-btn').addEventListener('click', (e) => {
+                sfx.enabled = !sfx.enabled;
+                e.currentTarget.textContent = sfx.enabled ? '🔊' : '🔇';
+            });
+
+            document.getElementById('help-btn').addEventListener('click', () => {
+                document.getElementById('help-modal').classList.remove('hidden');
+            });
+            document.getElementById('close-help-btn').addEventListener('click', () => {
+                document.getElementById('help-modal').classList.add('hidden');
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 8. QUIZ MECHANISM & GATE UNLOCK LOGIC
+         * ============================================================================
+         */
+        function getQuestionForTopic(topic) {
+            const list = QUESTION_BANK[topic];
+            if (!usedQuestionIndices[topic]) usedQuestionIndices[topic] = [];
+
+            let available = list.map((_, idx) => idx).filter(i => !usedQuestionIndices[topic].includes(i));
+            if (available.length === 0) {
+                usedQuestionIndices[topic] = [];
+                available = list.map((_, idx) => idx);
+            }
+            const chosenIdx = available[Math.floor(Math.random() * available.length)];
+            usedQuestionIndices[topic].push(chosenIdx);
+            return list[chosenIdx];
+        }
+
+        function openGateQuiz(gate) {
+            isQuizOpen = true;
+            activeGate = gate;
+            currentQuestion = getQuestionForTopic(gate.topic);
+
+            const modal = document.getElementById('quiz-modal');
+            document.getElementById('quiz-gate-badge').textContent = `GERBANG ${gate.num} DARI 10`;
+            document.getElementById('quiz-topic-title').textContent = gate.topic;
+            document.getElementById('quiz-question-text').textContent = currentQuestion.q;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            const feedbackBox = document.getElementById('quiz-feedback');
+            feedbackBox.classList.add('hidden');
+
+            const letters = ['A', 'B', 'C', 'D'];
+            currentQuestion.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = "w-full text-left p-3.5 rounded-2xl border-2 border-slate-200 hover:border-amber-500 hover:bg-amber-50 font-bold text-slate-700 text-sm md:text-base transition flex items-start gap-3";
+                btn.innerHTML = `
+                    <span class="bg-slate-200 text-slate-800 font-extrabold w-7 h-7 rounded-lg flex items-center justify-center shrink-0">${letters[idx]}</span>
+                    <span>${optText}</span>
+                `;
+                btn.addEventListener('click', () => handleAnswerSelection(idx, btn));
+                optionsContainer.appendChild(btn);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function handleAnswerSelection(selectedIdx, btnElement) {
+            const allButtons = document.querySelectorAll('#quiz-options button');
+            allButtons.forEach(b => b.disabled = true);
+
+            const feedbackBox = document.getElementById('quiz-feedback');
+            const fbTitle = document.getElementById('quiz-feedback-title');
+            const fbDesc = document.getElementById('quiz-feedback-desc');
+            const continueBtn = document.getElementById('quiz-continue-btn');
+
+            feedbackBox.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-400', 'text-emerald-900', 'bg-rose-50', 'border-rose-400', 'text-rose-900');
+
+            if (selectedIdx === currentQuestion.answer) {
+                // CORRECT ANSWER
+                sfx.playCorrect();
+                btnElement.classList.remove('border-slate-200');
+                btnElement.classList.add('border-emerald-500', 'bg-emerald-100', 'text-emerald-900');
+
+                feedbackBox.classList.add('bg-emerald-50', 'border-emerald-400', 'text-emerald-900');
+                fbTitle.textContent = "✅ Jawaban Benar! Gerbang Terbuka!";
+                fbDesc.textContent = currentQuestion.explanation;
+
+                continueBtn.textContent = "Lanjutkan Petualangan ➔";
+                continueBtn.className = "mt-3 w-full py-2.5 rounded-xl font-bold text-white shadow bg-emerald-600 hover:bg-emerald-500";
+
+                // Update Score & Gate State (60 pts per gate x 10 = 600 pts)
+                score += 60;
+                gatesOpenedCount++;
+                activeGate.isOpen = true;
+                safeCheckpoint.copy(activeGate.pos);
+                sfx.playGateOpen();
+
+                // Unlock Final Gold Shield if all 10 questions are answered!
+                if (gatesOpenedCount >= 10 && finishShieldMesh) {
+                    finishShieldMesh.visible = false;
+                }
+                updateHUD();
+                syncSharedWorldProgress();
+                syncLocalPlayerToCloud();
+
+                continueBtn.onclick = () => {
+                    closeQuizModal();
+                };
+
+            } else {
+                // WRONG ANSWER - GATE STAYS LOCKED!
+                sfx.playWrong();
+                btnElement.classList.remove('border-slate-200');
+                btnElement.classList.add('border-rose-500', 'bg-rose-100', 'text-rose-900');
+
+                feedbackBox.classList.add('bg-rose-50', 'border-rose-400', 'text-rose-900');
+                fbTitle.textContent = "❌ Jawaban Kurang Tepat! Gerbang Masih Terkunci.";
+                fbDesc.textContent = "Ayo coba lagi dengan pertanyaan baru pada topik yang sama agar pintu gerbang dapat terbuka!";
+
+                continueBtn.textContent = "🔄 Coba Pertanyaan Pengganti";
+                continueBtn.className = "mt-3 w-full py-2.5 rounded-xl font-bold text-white shadow bg-rose-600 hover:bg-rose-500";
+
+                score = Math.max(0, score - 15);
+                updateHUD();
+
+                continueBtn.onclick = () => {
+                    openGateQuiz(activeGate);
+                };
+            }
+        }
+
+        function closeQuizModal() {
+            document.getElementById('quiz-modal').classList.add('hidden');
+            isQuizOpen = false;
+        }
+
+        document.getElementById('close-quiz-btn').addEventListener('click', closeQuizModal);
+
+        /**
+         * ============================================================================
+         * 9. PLAYER MOVEMENT, TRAPS, MONSTERS, HIDING & 2D INSERT MAP
+         * ============================================================================
+         */
+        function checkCollision(nextPos, radius = 0.52) {
+            const playerBox = new THREE.Box3(
+                new THREE.Vector3(nextPos.x - radius, 0.1, nextPos.z - radius),
+                new THREE.Vector3(nextPos.x + radius, 2.2, nextPos.z + radius)
+            );
+
+            for (let box of wallColliders) {
+                if (playerBox.intersectsBox(box)) return true;
+            }
+            for (let g of gates) {
+                if (!g.isOpen && playerBox.intersectsBox(g.collider)) return true;
+            }
+            return false;
+        }
+
+        function damagePlayer(reasonText) {
+            if (invulnerableTimer > 0 || !isGameRunning) return;
+            sfx.playHurt();
+            lives--;
+            invulnerableTimer = 2.2;
+
+            // Red flash screen effect
+            const vig = document.getElementById('screen-vignette');
+            vig.style.opacity = '1';
+            setTimeout(() => { vig.style.opacity = '0'; }, 350);
+
+            updateHUD();
+
+            if (lives <= 0) {
+                triggerGameOver(reasonText);
+            } else {
+                // Respawn player at last safe checkpoint
+                playerState.pos.copy(safeCheckpoint);
+                playerState.velY = 0;
+            }
+        }
+
+        function updateTrapsAndCollectibles(dt, elapsed) {
+            // 1. Collectibles (SDA Crystals: 15 crystals x 20 pts = 300 pts)
+            for (let item of collectibles) {
+                if (item.collected) continue;
+                item.gem.rotation.y += dt * 2.4;
+                item.gem.position.y = Math.sin(elapsed * 3.5 + item.r) * 0.16;
+
+                if (playerState.pos.distanceTo(item.pos) < 1.5) {
+                    item.collected = true;
+                    item.mesh.visible = false;
+                    crystalsCollected++;
+                    score += 20;
+                    sfx.playCoin();
+                    updateHUD();
+                    syncSharedWorldProgress();
+                }
+            }
+
+            // 2. Floor Traps (Periodic Spikes & Lava)
+            for (let t of traps) {
+                if (t.type === 'spikes') {
+                    const cycle = Math.sin(elapsed * 2.4 + t.phase);
+                    t.isActive = cycle > 0.25;
+                    const targetY = t.isActive ? 0 : -0.95;
+                    t.spikesGroup.position.y += (targetY - t.spikesGroup.position.y) * 12 * dt;
+                } else if (t.type === 'lava') {
+                    t.mesh.material.color.setHex(Math.sin(elapsed * 5) > 0 ? 0xf97316 : 0xef4444);
+                }
+
+                if (t.isActive && playerState.pos.y < 0.6 && playerState.pos.distanceTo(t.pos) < 1.45) {
+                    damagePlayer(t.type === 'lava' ? "Kamu terjatuh ke dalam kolam lava panas!" : "Kamu terkena jebakan duri tajam di lantai!");
+                }
+            }
+        }
+
+        function updateMonsters(dt) {
+            let anyChasing = false;
+
+            for (let m of monsters) {
+                const distToPlayer = m.pos.distanceTo(playerState.pos);
+                const detectRange = m.isGoldGuardian ? 11.5 : 11.0;
+
+                // Monster detects player ONLY if player is NOT hidden in a bush/shelter
+                if (!isPlayerHidden && distToPlayer < detectRange) {
+                    if (!m.isChasing) {
+                        sfx.playMonsterAlert();
+                    }
+                    m.isChasing = true;
+                    anyChasing = true;
+                } else if (isPlayerHidden || distToPlayer > 15.0) {
+                    m.isChasing = false;
+                }
+
+                // Gold Guardian stays near the Gold zone unless chasing closely
+                if (m.isGoldGuardian && m.pos.distanceTo(m.spawnPos) > 13.0) {
+                    m.isChasing = false;
+                }
+
+                const speed = m.isChasing ? (m.isGoldGuardian ? 7.5 : 7.0) : 3.2;
+
+                if (m.isChasing) {
+                    const toPlayer = new THREE.Vector3().subVectors(playerState.pos, m.pos);
+                    toPlayer.y = 0;
+                    if (toPlayer.length() > 0.1) toPlayer.normalize();
+
+                    const nextX = m.pos.clone();
+                    nextX.x += toPlayer.x * speed * dt;
+                    if (!checkCollision(nextX, 0.5)) m.pos.x = nextX.x;
+
+                    const nextZ = m.pos.clone();
+                    nextZ.z += toPlayer.z * speed * dt;
+                    if (!checkCollision(nextZ, 0.5)) m.pos.z = nextZ.z;
+
+                    m.dir.copy(toPlayer);
+                } else if (m.isGoldGuardian && m.pos.distanceTo(m.spawnPos) > 4.5) {
+                    // Gold Guardian returns to guard the Final Gold
+                    const toHome = new THREE.Vector3().subVectors(m.spawnPos, m.pos).normalize();
+                    const nextPos = m.pos.clone().addScaledVector(toHome, speed * dt);
+                    if (!checkCollision(nextPos, 0.5)) m.pos.copy(nextPos);
+                    m.dir.copy(toHome);
+                } else {
+                    // Patrol corridors
+                    const nextPos = m.pos.clone().addScaledVector(m.dir, speed * dt);
+                    if (!checkCollision(nextPos, 0.5)) {
+                        m.pos.copy(nextPos);
+                    } else {
+                        const dirs = [
+                            new THREE.Vector3(1, 0, 0),
+                            new THREE.Vector3(-1, 0, 0),
+                            new THREE.Vector3(0, 0, 1),
+                            new THREE.Vector3(0, 0, -1)
+                        ];
+                        const validDirs = dirs.filter(d => !checkCollision(m.pos.clone().addScaledVector(d, 1.0), 0.5));
+                        if (validDirs.length > 0) {
+                            m.dir = validDirs[Math.floor(Math.random() * validDirs.length)];
+                        } else {
+                            m.dir.negate();
+                        }
+                    }
+                }
+
+                // Update Monster Mesh Transform & Animation
+                m.mesh.position.copy(m.pos);
+                m.mesh.rotation.y = Math.atan2(m.dir.x, m.dir.z);
+                m.walkCycle += dt * (m.isChasing ? 15 : 7);
+                m.mesh.position.y = Math.abs(Math.sin(m.walkCycle)) * 0.18;
+                m.armL.rotation.x = -0.5 + Math.sin(m.walkCycle) * 0.35;
+                m.armR.rotation.x = -0.5 - Math.sin(m.walkCycle) * 0.35;
+
+                // Check if Monster catches/eats Player
+                if (!isPlayerHidden && m.pos.distanceTo(playerState.pos) < 1.2) {
+                    damagePlayer(m.isGoldGuardian
+                        ? "Kamu tertangkap oleh Monster Penjaga Emas Utama!"
+                        : "Kamu tertangkap dan dimakan oleh Monster Penjaga Labirin!");
+                }
+            }
+
+            isBeingChased = anyChasing;
+            const chaseEl = document.getElementById('chase-warning');
+            const vigEl = document.getElementById('screen-vignette');
+            if (isBeingChased) {
+                chaseEl.classList.remove('hidden');
+                vigEl.classList.add('danger-vignette');
+                vigEl.style.opacity = '1';
+            } else {
+                chaseEl.classList.add('hidden');
+                vigEl.classList.remove('danger-vignette');
+                if (invulnerableTimer <= 0) vigEl.style.opacity = '0';
+            }
+        }
+
+        function updatePlayer(dt) {
+            if (!isGameRunning || isQuizOpen || !playerMesh) return;
+
+            if (invulnerableTimer > 0) {
+                invulnerableTimer -= dt;
+                playerMesh.visible = Math.floor(invulnerableTimer * 12) % 2 === 0;
+            } else {
+                playerMesh.visible = !isFirstPerson;
+            }
+
+            // Movement Input Vector
+            let moveForward = 0;
+            let moveRight = 0;
+
+            if (keys['KeyW'] || keys['ArrowUp']) moveForward += 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveForward -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) moveRight += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveRight -= 1;
+
+            if (Math.abs(joyVector.x) > 0.1 || Math.abs(joyVector.y) > 0.1) {
+                moveForward = -joyVector.y;
+                moveRight = joyVector.x;
+            }
+
+            const inputLen = Math.hypot(moveForward, moveRight);
+            const wantsSprint = (keys['ShiftLeft'] || keys['ShiftRight'] || mobileSprintActive) && inputLen > 0.1;
+
+            if (wantsSprint && playerState.stamina > 2) {
+                playerState.isSprinting = true;
+                playerState.stamina = Math.max(0, playerState.stamina - 32 * dt);
+            } else {
+                playerState.isSprinting = false;
+                playerState.stamina = Math.min(100, playerState.stamina + 20 * dt);
+            }
+
+            const baseSpeed = 8.4;
+            const speed = playerState.isSprinting ? 13.5 : baseSpeed;
+
+            if (inputLen > 0.05) {
+                const normF = moveForward / Math.max(1, inputLen);
+                const normR = moveRight / Math.max(1, inputLen);
+
+                const forwardDir = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+                const rightDir = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+
+                const moveVec = new THREE.Vector3()
+                    .addScaledVector(forwardDir, normF)
+                    .addScaledVector(rightDir, normR)
+                    .normalize();
+
+                const stepDist = speed * dt;
+
+                const tryX = playerState.pos.clone();
+                tryX.x += moveVec.x * stepDist;
+                if (!checkCollision(tryX)) {
+                    playerState.pos.x = tryX.x;
+                }
+
+                const tryZ = playerState.pos.clone();
+                tryZ.z += moveVec.z * stepDist;
+                if (!checkCollision(tryZ)) {
+                    playerState.pos.z = tryZ.z;
+                }
+
+                const targetRot = Math.atan2(moveVec.x, moveVec.z);
+                let diff = targetRot - playerState.rotationY;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                playerState.rotationY += diff * 12 * dt;
+
+                playerState.walkCycle += dt * (playerState.isSprinting ? 18 : 12);
+                const swing = Math.sin(playerState.walkCycle) * 0.65;
+                playerMesh.userData.leftLeg.rotation.x = swing;
+                playerMesh.userData.rightLeg.rotation.x = -swing;
+                playerMesh.userData.leftArm.rotation.x = -swing * 0.85;
+                playerMesh.userData.rightArm.rotation.x = swing * 0.85;
+
+                playerState.stepTimer += dt;
+                if (playerState.stepTimer > (playerState.isSprinting ? 0.24 : 0.36) && playerState.isGrounded) {
+                    sfx.playStep();
+                    playerState.stepTimer = 0;
+                }
+            } else {
+                playerMesh.userData.leftLeg.rotation.x *= 0.8;
+                playerMesh.userData.rightLeg.rotation.x *= 0.8;
+                playerMesh.userData.leftArm.rotation.x *= 0.8;
+                playerMesh.userData.rightArm.rotation.x *= 0.8;
+            }
+
+            // Gravity & Jump
+            playerState.velY -= 26 * dt;
+            playerState.pos.y += playerState.velY * dt;
+            if (playerState.pos.y <= 0) {
+                playerState.pos.y = 0;
+                playerState.velY = 0;
+                playerState.isGrounded = true;
+            }
+
+            // Check Hiding Spot (Safe Shelter)
+            let insideHiding = false;
+            for (let h of hidingSpots) {
+                if (playerState.pos.distanceTo(h.pos) < h.radius) {
+                    insideHiding = true;
+                    break;
+                }
+            }
+            isPlayerHidden = insideHiding;
+            const stealthEl = document.getElementById('stealth-badge');
+            if (isPlayerHidden) {
+                stealthEl.classList.remove('hidden');
+                playerMesh.scale.set(0.75, 0.55, 0.75); // Crouch inside shelter
+            } else {
+                stealthEl.classList.add('hidden');
+                playerMesh.scale.set(0.68, 0.68, 0.68); // Compact Roblox character scale
+            }
+
+            playerMesh.position.copy(playerState.pos);
+            playerMesh.rotation.y = playerState.rotationY;
+
+            // Check Proximity to Closed Gates
+            let nearestClosedGate = null;
+            let minGateDist = 3.8;
+            for (let g of gates) {
+                if (!g.isOpen) {
+                    const dist = playerState.pos.distanceTo(g.pos);
+                    if (dist < minGateDist) {
+                        minGateDist = dist;
+                        nearestClosedGate = g;
+                    }
+                }
+            }
+
+            activeGate = nearestClosedGate;
+            const promptEl = document.getElementById('gate-prompt');
+            const mobileInteract = document.getElementById('mobile-interact-btn');
+            if (activeGate) {
+                promptEl.classList.remove('hidden');
+                mobileInteract.classList.remove('hidden');
+            } else {
+                promptEl.classList.add('hidden');
+                mobileInteract.classList.add('hidden');
+            }
+
+            // Check Final Gold Reached (Requires all 10 Gates answered correctly!)
+            const goldLockEl = document.getElementById('gold-locked-msg');
+            if (playerState.pos.distanceTo(finishPos) < 2.4) {
+                if (gatesOpenedCount >= 10) {
+                    goldLockEl.classList.add('hidden');
+                    triggerVictory();
+                } else {
+                    goldLockEl.classList.remove('hidden');
+                }
+            } else {
+                goldLockEl.classList.add('hidden');
+            }
+        }
+
+        function updateCamera() {
+            if (!playerMesh) return;
+            if (isFirstPerson) {
+                camera.position.set(playerState.pos.x, playerState.pos.y + 1.65, playerState.pos.z);
+                const lookTarget = new THREE.Vector3(
+                    camera.position.x - Math.sin(cameraYaw) * 10,
+                    camera.position.y - Math.sin(cameraPitch - 0.35) * 10,
+                    camera.position.z - Math.cos(cameraYaw) * 10
+                );
+                camera.lookAt(lookTarget);
+            } else {
+                // Slightly pulled-back camera so Roblox character appears compact & spacious
+                const camDist = 9.8;
+                const horizontalDist = camDist * Math.cos(cameraPitch);
+                const verticalDist = camDist * Math.sin(cameraPitch) + 2.4;
+
+                const idealX = playerState.pos.x + Math.sin(cameraYaw) * horizontalDist;
+                const idealZ = playerState.pos.z + Math.cos(cameraYaw) * horizontalDist;
+                const idealY = playerState.pos.y + verticalDist;
+
+                camera.position.lerp(new THREE.Vector3(idealX, idealY, idealZ), 0.18);
+                camera.lookAt(playerState.pos.x, playerState.pos.y + 1.15, playerState.pos.z);
+            }
+        }
+
+        function drawMiniMap() {
+            const canvas = document.getElementById('minimap-canvas');
+            const ctx = canvas.getContext('2d');
+            const rows = MAZE_GRID.length;
+            const cols = MAZE_GRID[0].length;
+            const cellW = canvas.width / cols;
+            const cellH = canvas.height / rows;
+
+            // Maze Pathways Background
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = MAZE_GRID[r][c];
+                    if (cell === 1) {
+                        ctx.fillStyle = '#64748b';
+                        ctx.fillRect(c * cellW, r * cellH, cellW + 0.5, cellH + 0.5);
+                    } else if (cell === 'F') {
+                        ctx.fillStyle = '#fde047';
+                        ctx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
+                    }
+                }
+            }
+
+            // Draw Hiding Spots (Green Safe Zones)
+            for (let h of hidingSpots) {
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(h.c * cellW + 2, h.r * cellH + 2, cellW - 4, cellH - 4);
+            }
+
+            // Draw Uncollected Point Crystals (Gold Dots)
+            for (let item of collectibles) {
+                if (!item.collected) {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc((item.c + 0.5) * cellW, (item.r + 0.5) * cellH, Math.max(2, cellW * 0.2), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw Gates
+            for (let g of gates) {
+                ctx.fillStyle = g.isOpen ? '#22c55e' : '#f43f5e';
+                ctx.fillRect(g.c * cellW + 1, g.r * cellH + 1, cellW - 2, cellH - 2);
+            }
+
+            // Draw Moving Monsters (Red Pulsing Dots)
+            for (let m of monsters) {
+                const mx = (m.pos.x / CELL_SIZE + 0.5) * cellW;
+                const mz = (m.pos.z / CELL_SIZE + 0.5) * cellH;
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(mx, mz, Math.max(3, cellW * 0.34), 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw Classmates in Multiplayer Mode (Purple Dots)
+            Object.values(remotePlayers).forEach(rp => {
+                const rx = (rp.mesh.position.x / CELL_SIZE + 0.5) * cellW;
+                const rz = (rp.mesh.position.z / CELL_SIZE + 0.5) * cellH;
+                ctx.fillStyle = '#c084fc';
+                ctx.beginPath();
+                ctx.arc(rx, rz, Math.max(3.2, cellW * 0.34), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // Draw Player Arrow / Dot
+            const px = (playerState.pos.x / CELL_SIZE + 0.5) * cellW;
+            const pz = (playerState.pos.z / CELL_SIZE + 0.5) * cellH;
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(px, pz, Math.max(3.5, cellW * 0.38), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        /**
+         * ============================================================================
+         * 10. GAME LIFECYCLE (RULES SCREEN, HUD, TIME + SCORE GRADE, VICTORY & GAME OVER)
+         * ============================================================================
+         */
+        function getTimeBonus(seconds) {
+            // Under 3 mins (180s) -> 100 bonus pts; decreases gradually up to 10 mins (600s)
+            if (seconds <= 180) return 100;
+            if (seconds >= 600) return 20;
+            return Math.round(100 - ((seconds - 180) / 420) * 80);
+        }
+
+        function calculateGrade(currentScore, seconds = elapsedSeconds) {
+            // Max base score = 600 (10 gates * 60) + 300 (15 crystals * 20) = 900 pts + 100 time bonus = 1000 pts
+            const timeBonus = getTimeBonus(seconds);
+            const totalWithTime = currentScore + timeBonus;
+            const numericGrade = Math.min(100, Math.round((totalWithTime / 1000) * 100));
+            let letter = 'D';
+            if (numericGrade >= 88) letter = 'A';
+            else if (numericGrade >= 75) letter = 'B';
+            else if (numericGrade >= 60) letter = 'C';
+            return { numericGrade, letter, timeBonus, totalWithTime };
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-player-name').textContent = charConfig.name;
+            document.getElementById('hud-gates').textContent = `${gatesOpenedCount}/10`;
+            document.getElementById('hud-crystals').textContent = `${crystalsCollected}/${totalCrystals}`;
+            document.getElementById('hud-score').textContent = score;
+
+            const { numericGrade, letter } = calculateGrade(score, elapsedSeconds);
+            document.getElementById('hud-grade').textContent = `${numericGrade} (${letter})`;
+
+            // Hearts display
+            let heartsStr = '';
+            for (let i = 0; i < 3; i++) {
+                heartsStr += i < lives ? '❤️' : '🖤';
+            }
+            document.getElementById('hud-lives').textContent = heartsStr;
+
+            // Stamina Bar
+            const stamPct = Math.round(playerState.stamina);
+            document.getElementById('hud-stamina-text').textContent = `${stamPct}%`;
+            document.getElementById('hud-stamina-bar').style.width = `${stamPct}%`;
+
+            const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+            const secs = String(elapsedSeconds % 60).padStart(2, '0');
+            document.getElementById('hud-timer').textContent = `${mins}:${secs}`;
+        }
+
+        function startGame() {
+            sfx.init();
+            sfx.playCorrect();
+
+            if (playerMesh) scene.remove(playerMesh);
+            playerMesh = createBlockyCharacter(charConfig);
+            playerMesh.scale.set(0.68, 0.68, 0.68);
+            scene.add(playerMesh);
+
+            // Reset Player & Checkpoints
+            for (let r = 0; r < MAZE_GRID.length; r++) {
+                for (let c = 0; c < MAZE_GRID[0].length; c++) {
+                    if (MAZE_GRID[r][c] === 'S') {
+                        playerState.pos.set(c * CELL_SIZE, 0, r * CELL_SIZE);
+                        safeCheckpoint.copy(playerState.pos);
+                    }
+                }
+            }
+            playerState.velY = 0;
+            playerState.rotationY = 0;
+            playerState.stamina = 100;
+            cameraYaw = Math.PI;
+
+            // Reset Gates & Gold Barrier
+            gates.forEach(g => {
+                g.isOpen = false;
+                g.openProgress = 0;
+                g.doorMesh.position.y = 0;
+            });
+            if (finishShieldMesh) {
+                finishShieldMesh.visible = true;
+            }
+
+            // Reset Collectibles
+            collectibles.forEach(item => {
+                item.collected = false;
+                item.mesh.visible = true;
+            });
+
+            // Reset Monsters
+            monsters.forEach(m => {
+                m.pos.copy(m.spawnPos);
+                m.isChasing = false;
+            });
+
+            score = 0;
+            crystalsCollected = 0;
+            gatesOpenedCount = 0;
+            lives = 3;
+            invulnerableTimer = 0;
+            elapsedSeconds = 0;
+            usedQuestionIndices = {};
+            isGameRunning = true;
+            isQuizOpen = false;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('rules-screen').classList.add('hidden');
+            document.getElementById('victory-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('hud-container').classList.remove('hidden');
+
+            const multiPanel = document.getElementById('hud-multiplayer-panel');
+            if (isMultiplayer) {
+                roomCode = (document.getElementById('room-code-input').value.trim().toUpperCase()) || "IPS7A";
+                document.getElementById('hud-room-code').textContent = roomCode;
+                multiPanel.classList.remove('hidden');
+                joinMultiplayerRoom();
+            } else {
+                multiPanel.classList.add('hidden');
+                cleanupMultiplayerListeners();
+            }
+
+            updateHUD();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (isGameRunning && !isQuizOpen) {
+                    elapsedSeconds++;
+                    updateHUD();
+                }
+            }, 1000);
+        }
+
+        function triggerVictory() {
+            if (!isGameRunning) return;
+            isGameRunning = false;
+            clearInterval(timerInterval);
+            sfx.playVictory();
+            syncLocalPlayerToCloud(true);
+
+            document.getElementById('hud-container').classList.add('hidden');
+            document.getElementById('screen-vignette').style.opacity = '0';
+            document.getElementById('victory-screen').classList.remove('hidden');
+
+            const { numericGrade, letter, timeBonus, totalWithTime } = calculateGrade(score, elapsedSeconds);
+            document.getElementById('vic-player-name').textContent = charConfig.name;
+            document.getElementById('vic-score').textContent = totalWithTime;
+            document.getElementById('vic-gates').textContent = `${gatesOpenedCount}/10`;
+            document.getElementById('vic-crystals').textContent = `${crystalsCollected}/${totalCrystals}`;
+            document.getElementById('vic-time').textContent = document.getElementById('hud-timer').textContent;
+            document.getElementById('vic-time-bonus-info').textContent = `⏱️ Catatan Waktu ${document.getElementById('hud-timer').textContent} ➔ Bonus Kecepatan: +${timeBonus} Poin`;
+            document.getElementById('vic-final-grade').textContent = numericGrade;
+            document.getElementById('vic-letter-grade').textContent = `Predikat ${letter}`;
+
+            const badge = document.getElementById('vic-rank-badge');
+            if (numericGrade >= 90) {
+                badge.textContent = "🌟 Profesor Muda Sumber Daya Alam (Sempurna!)";
+            } else if (numericGrade >= 75) {
+                badge.textContent = "🏅 Duta Potensi Indonesia Maju";
+            } else {
+                badge.textContent = "🧭 Penjelajah Tangguh Nusantara";
+            }
+        }
+
+        function triggerGameOver(reasonText) {
+            isGameRunning = false;
+            clearInterval(timerInterval);
+
+            document.getElementById('hud-container').classList.add('hidden');
+            document.getElementById('screen-vignette').style.opacity = '0';
+            document.getElementById('gameover-screen').classList.remove('hidden');
+
+            document.getElementById('gameover-reason').textContent = reasonText;
+            document.getElementById('go-score').textContent = score;
+            document.getElementById('go-gates').textContent = `${gatesOpenedCount}/10`;
+        }
+
+        // Screen Flow Navigation Listeners
+        document.getElementById('to-rules-btn').addEventListener('click', () => {
+            sfx.init();
+            sfx.playStep();
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('rules-screen').classList.remove('hidden');
+        });
+        document.getElementById('back-to-custom-btn').addEventListener('click', () => {
+            document.getElementById('rules-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        });
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+        document.getElementById('retry-game-btn').addEventListener('click', startGame);
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            document.getElementById('victory-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            rebuildPreviewCharacter();
+        });
+
+        // Main Animation Loop
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const elapsed = clock.elapsedTime;
+
+            if (!isGameRunning && previewRenderer && previewCharMesh) {
+                if (!isDraggingPreview) previewAngle += dt * 0.7;
+                previewCharMesh.rotation.y = previewAngle;
+                previewRenderer.render(previewScene, previewCamera);
+            }
+
+            clouds.forEach(c => {
+                c.position.x += dt * 1.2;
+                if (c.position.x > 100) c.position.x = -25;
+            });
+
+            if (finishObject) {
+                finishObject.rotation.y += dt * 1.8;
+                finishObject.position.y = 2.1 + Math.sin(elapsed * 3) * 0.22;
+            }
+
+            gates.forEach(g => {
+                if (g.isOpen && g.openProgress < 1) {
+                    g.openProgress = Math.min(1, g.openProgress + dt * 1.8);
+                    g.doorMesh.position.y = g.openProgress * (WALL_HEIGHT - 0.2);
+                }
+            });
+
+            if (isGameRunning) {
+                if (!isQuizOpen) {
+                    updatePlayer(dt);
+                    updateTrapsAndCollectibles(dt, elapsed);
+                    updateMonsters(dt);
+                    updateHUD();
+                }
+                if (isMultiplayer) {
+                    updateRemotePlayers(dt);
+                    syncLocalPlayerToCloud(false);
+                }
+                updateCamera();
+                drawMiniMap();
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Responsive Resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            const prevContainer = document.getElementById('preview-canvas-container');
+            if (previewCamera && previewRenderer && prevContainer.clientWidth > 0) {
+                previewCamera.aspect = prevContainer.clientWidth / prevContainer.clientHeight;
+                previewCamera.updateProjectionMatrix();
+                previewRenderer.setSize(prevContainer.clientWidth, prevContainer.clientHeight);
+            }
+        });
+
+        // Initialize Everything on Window Load
+        window.onload = function () {
+            initPreviewScene();
+            setupCustomizationUI();
+            initGameWorld();
+            animate();
+        };
+    </script>
+</body>
+</html>
